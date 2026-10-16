@@ -11,7 +11,7 @@
 
 </div>
 
-Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT)** inside Forge Neo, using the checkpoint, preset and Generate button you already know - text-to-image with sharp text in English and Chinese.
+Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT)** inside Forge Neo, using the checkpoint, preset and Generate button you already know - text-to-image with sharp text in English and Chinese, image-to-image, and layouts placed with boxes in the prompt.
 
 > [!Important]
 > This extension requires an up-to-date **Forge Neo** (the `neo` branch). On an older version it stays disabled and tells you so in the console - Forge Neo itself keeps working as usual.
@@ -33,7 +33,8 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 ### v0.1.0 - First Release
 
-- **MOSS-Image in Forge Neo** - OpenMOSS's text-to-image model, with its Qwen3.5 9B text encoder
+- **MOSS-Image in Forge Neo** - OpenMOSS's SFT and Base models, with their Qwen3.5 9B text encoder
+- **Image-to-image** and **layouts by boxes** - put things where you want them with a JSON layout in the prompt
 - **moss** UI preset and **MOSS** schedule - upstream's settings, ready to generate
 - **Upstream's guidance** - the negative pass skips block 22, as the official pipeline does, with a setting to change it
 
@@ -45,7 +46,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 <p align="center"><img src=".github/images/text-rendering.jpg" alt="A refrigerator with a sticky note in Chinese, and another one with a note that reads Moss works on Forge Neo" width="720"></p>
 
-- Runs inside txt2img - no separate tab, no extra environment
+- Runs inside txt2img and img2img - no separate tab, no extra environment
 - Works with the Forge Neo model folders and the **VAE / Text Encoder** selector you already use
 - Uses the same autoencoder as FLUX.2 and FLUX 3 - if you have `flux2-vae`, you already have it
 - Writes the text you put in quotes in the prompt, in English and in Chinese
@@ -57,6 +58,21 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 - Titles, captions and signs come out as written - put the exact words in quotes
 - Any size that is a multiple of 16, such as 832x1248 for a poster
+
+### 📐 Layout by Boxes
+
+<p align="center"><img src=".github/images/layout.jpg" alt="A vase, a chalkboard that reads MOSS LAYOUT and a teapot placed left to right by boxes, with the Base and the SFT model" width="720"></p>
+
+- Tell the model where each thing goes: write the whole prompt as a JSON layout, in the format of [MOSS-Image's user guide](https://github.com/OpenMOSS/MOSS-Image/blob/main/USERGUIDE.md#layout-prompts-experimental)
+- A `summary.caption` for the whole scene, then one item per thing with its `caption`, its `text` if it is writing, and its `bbox`
+- Boxes are `[top, left, bottom, right]` in pixels from the center of the picture - on a 1024x1024 image both axes go from -512 to 512
+- Works with the Base and the SFT model; give boxes that make sense in the scene - things placed where they could not stand tend to follow the caption instead
+
+### 🔁 Image-to-Image
+
+<p align="center"><img src=".github/images/img2img.jpg" alt="The refrigerator with a Moss works on Forge Neo note, and the same picture redone in img2img with a note that reads Img2img works too" width="720"></p>
+
+- Put a picture in img2img and describe the result: with **Denoising strength** around 0.6 the scene stays and the details you change follow the prompt
 
 ### 🧭 Upstream's Guidance
 
@@ -82,7 +98,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 | Part | File | Folder |
 | :--- | :--- | :--- |
-| MOSS-Image checkpoint | `moss_image_sft_int8_convrot_attn` | `models/Stable-diffusion` |
+| MOSS-Image checkpoint | `moss_image_sft_int8_convrot` - or `moss_image_base_int8_convrot` for the Base model | `models/Stable-diffusion` |
 | Qwen3.5 9B text encoder | `qwen3.5_9b_int8_convrot` | `models/text_encoder` |
 | FLUX.2 autoencoder | `flux2-vae` | `models/VAE` |
 
@@ -90,7 +106,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 7. Pick the **moss** UI preset, the checkpoint, and the text encoder and autoencoder under **VAE / Text Encoder**
 
 > [!Note]
-> Tested with the INT8 files of the SFT model, on an NVIDIA A40. The Base model and the BF16 files of the same repository have not been tested yet.
+> Tested with the INT8 files of the SFT and Base models, on an NVIDIA A40 and an RTX A6000. The BF16 files of the same repository have not been tested yet.
 
 ---
 
@@ -100,7 +116,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 | :--- | :--- | :--- | :--- |
 | Euler | MOSS | 50 | 3 |
 
-The **moss** preset sets these values. Leave the **negative prompt** empty, and use sides that are a multiple of 16.
+The **moss** preset sets these values; change them on the **MOSS** page of **Settings** and the preset keeps yours. Leave the **negative prompt** empty with the SFT model; with the Base model, the user guide suggests `nsfw, worst quality, bad anatomy, watermark, jpeg artifact`. Use sides that are a multiple of 16.
 
 ---
 
