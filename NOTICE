@@ -1,0 +1,26 @@
+MOSS-Image for Forge Neo
+Copyright 2026 eduardoabreu81
+
+This extension is licensed under the GNU Affero General Public License v3.0 (see LICENSE).
+
+It contains code ported from projects licensed under the Apache License, Version 2.0
+(see LICENSE-APACHE) and the GNU General Public License v3.0; their notices follow.
+
+forge_moss/native/qwen35.py is ported from ComfyUI's Qwen3.5 text encoder
+(https://github.com/comfyanonymous/ComfyUI, commit a09d037, comfy/text_encoders/qwen35.py, GNU General Public
+License v3.0), with the numerics of transformers' Qwen3.5 model (https://github.com/huggingface/transformers,
+commit 09281b8, src/transformers/models/qwen3_5/modeling_qwen3_5.py), Copyright The HuggingFace Team and The
+Qwen Team, Apache License 2.0. tests/reference/qwen35_hf.py is a transcription of that transformers file without
+the transformers framework, used only by the tests.
+
+forge_moss/native/text_engine.py follows MOSS-Image's reference pipeline
+(https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT, pipeline_moss_image.py), Copyright OpenMOSS Team,
+Apache License 2.0.
+
+forge_moss/native/huggingface/moss-image/tokenizer/tokenizer.json is the Qwen3.5 tokenizer as MOSS-Image ships it
+(https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT), Qwen Team, Apache License 2.0. text_encoder/config.json and
+transformer/config.json restate the MOSS-Image configurations; vae/config.json is the FLUX.2 autoencoder
+configuration as Forge Neo ships it.
+
+The MOSS-Image weights are not part of this extension. They are released by the OpenMOSS Team under the Apache
+License 2.0 (https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT, https://huggingface.co/Comfy-Org/MOSS-Image).
