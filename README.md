@@ -4,7 +4,7 @@
 
 [![Forge Neo](https://img.shields.io/badge/Forge-Neo-blue)](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo)
 [![Gradio](https://img.shields.io/badge/Gradio-4.40.0-orange)](https://gradio.app/)
-[![Version](https://img.shields.io/badge/Version-0.1.0-brightgreen)](https://github.com/eduardoabreu81/moss-image-forge-neo)
+[![Version](https://img.shields.io/badge/Version-0.1.1-brightgreen)](https://github.com/eduardoabreu81/moss-image-forge-neo)
 [![License](https://img.shields.io/badge/License-AGPL--3.0-green.svg)](LICENSE)
 
 > **Extension for [Stable Diffusion WebUI Forge - Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo)**
@@ -30,6 +30,11 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 ---
 
 ## 🆕 What's New
+
+### v0.1.1 - Works Alongside Other Extensions
+
+- **Plays well with other extensions** - the Forge check no longer disables MOSS-Image when another extension, such as FLUX 3, loads first and hooks the loader ([#1](https://github.com/eduardoabreu81/moss-image-forge-neo/issues/1))
+- **8-step LoRA** - lodestones' LoRA works with the SFT model, pictures in 8 steps instead of 50 ([how to use it](#-8-step-lora))
 
 ### v0.1.0 - First Release
 
