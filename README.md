@@ -79,6 +79,14 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 - The negative-prompt pass of CFG leaves out block 22 of the model, as the official pipeline does by default
 - Change it under **Settings → Stable Diffusion → [MOSS-Image] Blocks skipped in the negative-prompt pass**: other blocks, comma-separated, or empty for plain CFG
 
+### ⚡ 8-Step LoRA
+
+- The 8-step LoRA from [lodestones](https://huggingface.co/lodestones/MOSS-Image-SFT-8-steps-dmd) works with the SFT model: pictures in 8 steps instead of 50, with no negative prompt pass
+- Download `lora.safetensors`, rename it to something clearer such as `moss_8step.safetensors`, put it in `models/Lora` and add it to the prompt, for example `<lora:moss_8step:1>` - or use the LoRA tab as usual
+- Set **Sampler** to Euler, **Schedule type** to MOSS (or Simple), **Steps** to 8 and **CFG** to 1
+- It is a work in progress: the picture is sharp and the writing is readable, but fine details and text are a little less clean than with 50 steps. With 4 steps the picture came out washed out, so stay at 8
+- If you prefer `lora_latest.safetensors`, the author recommends strength 0.7
+
 ### 🛡️ Safe by Design
 
 - Changes no Forge Neo file - remove the extension and everything is as it was
@@ -106,7 +114,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 7. Pick the **moss** UI preset, the checkpoint, and the text encoder and autoencoder under **VAE / Text Encoder**
 
 > [!Note]
-> Tested with the INT8 files of the SFT and Base models, on an NVIDIA A40 and an RTX A6000. The BF16 files of the same repository have not been tested yet.
+> Tested with the INT8 files of the SFT and Base models, on an NVIDIA A40 and an RTX A6000. The BF16 files of the same repository have not been tested yet. The 8-step LoRA was tested with the INT8 SFT model on an RTX 2070 (8 GB).
 
 ---
 
@@ -135,6 +143,7 @@ The **moss** preset sets these values; change them on the **MOSS** page of **Set
 - **[MOSS-Image](https://github.com/OpenMOSS/MOSS-Image)** by the OpenMOSS Team - the model and its reference pipeline
 - **[ComfyUI](https://github.com/comfyanonymous/ComfyUI)** by comfyanonymous and Comfy-Org - the Qwen3.5 implementation this port follows, and the INT8 files
 - **[Qwen3.5](https://huggingface.co/Qwen)** by the Qwen team - the text encoder
+- **[lodestones](https://huggingface.co/lodestones/MOSS-Image-SFT-8-steps-dmd)** - the 8-step LoRA
 - **[Transformers](https://github.com/huggingface/transformers)** by Hugging Face - the Qwen3.5 reference
 
 The MOSS-Image weights are released by the OpenMOSS Team under the Apache License 2.0; this extension does not include them.
