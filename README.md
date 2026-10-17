@@ -4,7 +4,7 @@
 
 [![Forge Neo](https://img.shields.io/badge/Forge-Neo-blue)](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo)
 [![Gradio](https://img.shields.io/badge/Gradio-4.40.0-orange)](https://gradio.app/)
-[![Version](https://img.shields.io/badge/Version-0.1.1-brightgreen)](https://github.com/eduardoabreu81/moss-image-forge-neo)
+[![Version](https://img.shields.io/badge/Version-0.1.2-brightgreen)](https://github.com/eduardoabreu81/moss-image-forge-neo)
 [![License](https://img.shields.io/badge/License-AGPL--3.0-green.svg)](LICENSE)
 
 > **Extension for [Stable Diffusion WebUI Forge - Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo)**
@@ -30,6 +30,11 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 ---
 
 ## 🆕 What's New
+
+### v0.1.2 - Layouts with Dynamic Prompts
+
+- **Layouts work with sd-dynamic-prompts installed** - it takes the `{ }` out of a JSON layout before the model reads it; MOSS-Image now puts them back, so the picture is the same as without it
+- **Draw your layouts** - [Regional Boxes](https://github.com/eduardoabreu81/sd-regional-boxes-neo) 0.2.0 writes them for you: draw a box per thing or text, and the layout lands in the prompt
 
 ### v0.1.1 - Works Alongside Other Extensions
 
@@ -72,6 +77,8 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 - A `summary.caption` for the whole scene, then one item per thing with its `caption`, its `text` if it is writing, and its `bbox`
 - Boxes are `[top, left, bottom, right]` in pixels from the center of the picture - on a 1024x1024 image both axes go from -512 to 512
 - Works with the Base and the SFT model; give boxes that make sense in the scene - things placed where they could not stand tend to follow the caption instead
+- Rather draw than type? [Regional Boxes](https://github.com/eduardoabreu81/sd-regional-boxes-neo) writes the layout from boxes drawn with the mouse
+- Works with sd-dynamic-prompts on: the infotext shows the layout without its `{ }`, but the model gets it whole
 
 ### 🔁 Image-to-Image
 

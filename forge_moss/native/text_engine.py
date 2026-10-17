@@ -11,6 +11,8 @@ from backend.args import dynamic_args
 from backend.text_processing import emphasis
 from backend.text_processing._comfy import INF, SDClipModel, SDTokenizer
 
+from .layout import restore_layout_json
+
 # <|endoftext|>: never part of the template, so Forge's end-of-text masking never cuts the prompt
 PAD = 248044
 TEMPLATE = "<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n<think>\n"
@@ -31,8 +33,10 @@ class MossTextEngine:
 
     def token_ids(self, text: str) -> list[int]:
         # surrounding whitespace is dropped (as Forge's Krea 2 engine does), so the spaces a removed LoRA tag leaves
-        # behind do not change the prompt, and "", " " or only LoRA tags are upstream's empty negative prompt
-        return self.tokenizer.tokenizer.encode(TEMPLATE.format(text.strip()), add_special_tokens=False)[:MAX_LENGTH]
+        # behind do not change the prompt, and "", " " or only LoRA tags are upstream's empty negative prompt; a layout
+        # whose braces sd-dynamic-prompts stripped is rebuilt first (layout.py)
+        text = restore_layout_json(text.strip())
+        return self.tokenizer.tokenizer.encode(TEMPLATE.format(text), add_special_tokens=False)[:MAX_LENGTH]
 
     def tokenize(self, texts: str | list[str]) -> int | list[int]:
         if isinstance(texts, str):

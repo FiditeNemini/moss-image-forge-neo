@@ -40,6 +40,12 @@ class TestTextEngine(unittest.TestCase):
         lengths = [len(self.te.TEMPLATE.format(text)) for text in ("", "ab")]
         self.assertEqual(self.engine.tokenize(["", "ab"]), lengths)
 
+    def test_layout_stripped_by_dynamic_prompts_is_encoded_whole(self):
+        layout = ('{"summary":{"caption":"A poster."},"items":[{"label":"text","caption":"Title.","text":"HI",'
+                  '"bbox":[-512,-512,-256,512]}],"bbox_coord_space":"abs_centralized","bbox_format":"yxyx"}')
+        stripped = layout.replace("{", "").replace("}", "")
+        self.assertEqual(self.engine.token_ids(stripped), self.engine.token_ids(layout))
+
     def test_layout_and_cache(self):
         cond = self.engine(["x", "x", "yz"])
         self.assertEqual(cond[0].shape, (len(self.engine.token_ids("x")), 3))
