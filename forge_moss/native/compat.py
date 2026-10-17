@@ -52,16 +52,26 @@ def check() -> list[str]:
     if not problems:
         from backend import loader, operations
 
-        source = inspect.getsource(loader.load_huggingface_component)
-        missing = [b for b in LOADER_BRANCHES if f'"{b}"' not in source]
-        if missing:
-            problems.append(f"the model loader has no {', '.join(missing)} branch")
-        missing = [s for s in LOADER_SOURCE if s not in source]
-        if missing:
-            problems.append(f"the model loader no longer does {'; '.join(missing)}")
-        # the Qwen3.5 norms are Forge's RMSNorm(add=True), the 1 + weight scale its Qwen3-VL uses
-        if "add" not in inspect.signature(operations.ForgeOperations.RMSNorm.__init__).parameters:
-            problems.append("backend.operations.RMSNorm has no add argument")
+        problems += loader_problems(loader, operations)
+
+    return problems
+
+
+def loader_problems(loader, operations) -> list[str]:
+    problems: list[str] = []
+
+    # the whole module, not load_huggingface_component: another extension that loaded first (the FLUX 3 one, for
+    # instance) has already put its own wrapper there, and a wrapper's source holds none of Forge's branches
+    source = inspect.getsource(loader)
+    missing = [b for b in LOADER_BRANCHES if f'"{b}"' not in source]
+    if missing:
+        problems.append(f"the model loader has no {', '.join(missing)} branch")
+    missing = [s for s in LOADER_SOURCE if s not in source]
+    if missing:
+        problems.append(f"the model loader no longer does {'; '.join(missing)}")
+    # the Qwen3.5 norms are Forge's RMSNorm(add=True), the 1 + weight scale its Qwen3-VL uses
+    if "add" not in inspect.signature(operations.ForgeOperations.RMSNorm.__init__).parameters:
+        problems.append("backend.operations.RMSNorm has no add argument")
 
     return problems
 
