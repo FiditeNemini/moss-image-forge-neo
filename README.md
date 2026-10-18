@@ -90,6 +90,8 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 - The negative-prompt pass of CFG leaves out block 22 of the model, as the official pipeline does by default
 - Change it under **Settings → Stable Diffusion → [MOSS-Image] Blocks skipped in the negative-prompt pass**: other blocks, comma-separated, or empty for plain CFG
+- OpenMOSS says blocks 22, 24 and 26 all help the picture, so `22, 24, 26` is worth a try
+- Plain CFG looks more realistic, but some details can fall apart
 
 ### ⚡ 8-Step LoRA
 
