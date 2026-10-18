@@ -5,7 +5,7 @@
 OPTION = "moss_uncond_skip_layers"
 DEFAULT = "22"
 LABEL = "[MOSS-Image] Blocks skipped in the negative-prompt pass"
-INFO = "zero-based, comma-separated; 22 = upstream's guidance; empty = plain CFG"
+INFO = "zero-based, comma-separated; 22 = upstream's guidance (24 and 26 also help); empty = plain CFG"
 # Forge Neo's "Stable Diffusion" settings section and category, where its per-model options ([Klein], [Krea2]...) live
 # (options_section splits its ("sd", "Stable Diffusion", "sd") the same way)
 SECTION = ("sd", "Stable Diffusion")
