@@ -8,6 +8,10 @@ import re
 
 from .checkpoints import shape_of
 
+# not Forge Neo's own "moss_image": since 2.31 Forge has a built-in MOSS-Image guess that matches that value, sits
+# earlier in model_list.models and would take this config (freq_dim and all) to its own DiT class (issue #4)
+IMAGE_MODEL = "moss_image_extension"
+
 IDENTITY_KEYS = ("text_embedder.proj.weight", "shared_block_modulation.weight", "video_head_modulation.weight",
                  "final_linear_video.weight", "layers.0.proj.ffn_up_gate.weight")
 
@@ -33,7 +37,7 @@ def detect(state_dict, key_prefix=""):
     # widths come from weights kept in bf16 in every build (embedders, norms, modulations)
     dim, latent_channels = shape("video_embedder.weight")
     return {
-        "image_model": "moss_image",
+        "image_model": IMAGE_MODEL,
         "dim": dim,
         "num_heads": dim // shape("layers.0.q_norm.weight")[0],
         "num_layers": count_blocks(list(state_dict.keys()), f"{key_prefix}layers."),

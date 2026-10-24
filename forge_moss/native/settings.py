@@ -12,6 +12,47 @@ SECTION = ("sd", "Stable Diffusion")
 CATEGORY = "sd"
 
 
+# Forge Neo 2.31+ has MOSS-Image support of its own: who runs the MOSS-Image checkpoints. With "Forge built-in" the
+# extension's detection steps aside and Forge's own guess, engine and Skip Layer Guidance take the checkpoint
+BACKEND_OPTION = "moss_backend"
+EXTENSION = "Extension"
+BUILT_IN = "Forge built-in"
+BACKEND_LABEL = "[MOSS-Image] Backend"
+BACKEND_INFO = ("who runs MOSS-Image checkpoints: this extension, or Forge Neo's built-in support (its own "
+                "[Moss-Image] Skip Layer Guidance options apply then); takes effect at the next generation")
+
+
+def forge_has_built_in() -> bool:
+    try:
+        from huggingface_guess import model_list
+
+        return hasattr(model_list, "MOSSImage")
+    except Exception:  # outside Forge Neo (CPU tests)
+        return False
+
+
+def use_extension() -> bool:
+    # an older Forge Neo has nothing to fall back to: the extension runs the checkpoints whatever the option says
+    if not forge_has_built_in():
+        return True
+    try:
+        from modules.shared import opts
+
+        return getattr(opts, BACKEND_OPTION, EXTENSION) != BUILT_IN
+    except Exception:  # before the options exist
+        return True
+
+
+def _reload_moss_model() -> None:
+    # Forge reloads a checkpoint only when its loading parameters change; a MOSS-Image model already loaded is
+    # dropped so that the next generation loads it again with the backend just chosen
+    from modules import sd_models
+
+    current = sd_models.model_data.sd_model
+    if getattr(current, "is_moss_image", False) or type(current).__name__ == "MOSSImage":
+        sd_models.model_data.forge_hash = ""
+
+
 def parse(text: str, depth: int) -> frozenset[int]:
     """The valid block indices in text; anything else is ignored."""
     layers = set()
@@ -35,6 +76,13 @@ def register() -> None:
     from modules import shared
     from modules.options import OptionInfo
 
+    if forge_has_built_in() and BACKEND_OPTION not in shared.opts.data_labels:
+        import gradio as gr
+
+        shared.opts.add_option(BACKEND_OPTION, OptionInfo(EXTENSION, BACKEND_LABEL, gr.Radio,
+                                                          {"choices": (EXTENSION, BUILT_IN)},
+                                                          onchange=_reload_moss_model, section=SECTION,
+                                                          category_id=CATEGORY).info(BACKEND_INFO))
     if OPTION not in shared.opts.data_labels:
         shared.opts.add_option(OPTION, OptionInfo(DEFAULT, LABEL, section=SECTION, category_id=CATEGORY,
                                                   infotext="MOSS skip").info(INFO))

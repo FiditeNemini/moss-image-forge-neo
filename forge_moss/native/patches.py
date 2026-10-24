@@ -10,7 +10,7 @@ from backend import loader
 from backend.nn import krea
 from huggingface_guess import detection, model_list
 
-from . import model, text_encoder
+from . import edit, model, settings, text_encoder
 from .checkpoints import check_vae, clean_transformer_state_dict, text_encoder_prefix
 from .engine import MossImageEngine
 from .transformer import MossImageDiT
@@ -24,7 +24,8 @@ def _hook_detection() -> None:
     original = detection.detect_unet_config
 
     def detect_unet_config(state_dict, key_prefix, *args, **kwargs):
-        dit_config = model.detect(state_dict, key_prefix)
+        # with "[MOSS-Image] Backend" on Forge built-in, the checkpoint is left to Forge Neo's own MOSS-Image guess
+        dit_config = model.detect(state_dict, key_prefix) if settings.use_extension() else None
         if dit_config is not None:
             return dit_config
         return original(state_dict, key_prefix, *args, **kwargs)
@@ -107,6 +108,29 @@ def _hook_cond_concat() -> None:
     ConditionCrossAttn.can_concat = can_concat
 
 
+def _hook_can_reference() -> None:
+    # ImageStitch (Forge's built-in multi-image input) only encodes references for the models dynamic_args.can_reference
+    # names; with the edit setting on, this one too
+    from backend.args import dynamic_args
+
+    original = getattr(dynamic_args, "can_reference", None)
+    if original is None or getattr(original, "_moss_image", False):
+        return
+
+    def can_reference():
+        return edit.enabled() or original()
+
+    can_reference._moss_image = True
+    dynamic_args.can_reference = can_reference
+
+
+def register_callbacks() -> None:
+    """Per script load: a UI reload clears script_callbacks and runs scripts/moss_image.py again."""
+    from modules import script_callbacks
+
+    script_callbacks.on_cfg_denoiser(edit.on_cfg_denoiser, name="moss_image_edit")
+
+
 def _register_scheduler() -> None:
     from modules import sd_schedulers, shared
 
@@ -136,6 +160,7 @@ def apply() -> None:
     _hook_components()
     _hook_text_encoder_file()
     _hook_cond_concat()
+    _hook_can_reference()
     try:
         _register_scheduler()
     except Exception as e:
@@ -148,6 +173,11 @@ def apply() -> None:
     except Exception as e:
         # the DiT falls back to upstream's default, block 22
         logger.warning(f"[MOSS-Image] could not add its setting: {e}")
+    try:
+        edit.register_settings()
+    except Exception as e:
+        # txt2img and img2img still work; editing stays off
+        logger.warning(f"[MOSS-Image] could not add the MOSS Image Edit settings: {e}")
     # Forge's built-in LoRA extension loads before this one; when it does not, the engine retries at model load
     from . import lora
 

@@ -4,6 +4,8 @@
 # the built module against the real checkpoints' headers (tests/fixtures).
 
 import json
+import sys
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -97,14 +99,31 @@ class TestTransformer(unittest.TestCase):
         self.assertEqual(settings.parse("22, 24;x 99 -1", 42), frozenset({22, 24}))
         self.assertEqual(settings.parse("", 42), frozenset())
 
+    def test_backend(self):
+        def shared(choice):
+            opts = types.SimpleNamespace(**{settings.BACKEND_OPTION: choice})
+            return mock.patch.dict(sys.modules, {"modules": types.ModuleType("modules"),
+                                                 "modules.shared": types.SimpleNamespace(opts=opts)})
+
+        # no built-in MOSS-Image in Forge (or no Forge at all): the extension, whatever the option says
+        with shared(settings.BUILT_IN):
+            self.assertTrue(settings.use_extension())
+        with mock.patch.object(settings, "forge_has_built_in", return_value=True):
+            with shared(settings.BUILT_IN):
+                self.assertFalse(settings.use_extension())
+            with shared(settings.EXTENSION):
+                self.assertTrue(settings.use_extension())
+
 
 class TestRealCheckpoints(unittest.TestCase):
     def check(self, name, fused):
         header = json.loads((FIXTURES / f"{name}.shapes.json").read_text())
         config = detect.detect(header)
-        self.assertEqual(config, {"image_model": "moss_image", "dim": 3072, "num_heads": 24, "num_layers": 42,
+        self.assertEqual(config, {"image_model": detect.IMAGE_MODEL, "dim": 3072, "num_heads": 24, "num_layers": 42,
                                   "ffn_dim": 8192, "text_dim": 4096, "freq_dim": 256, "latent_channels": 128,
                                   "fused_qkv": fused})
+        # Forge Neo 2.31's built-in guess matches "moss_image" and would take this config to its own DiT (issue #4)
+        self.assertNotEqual(config["image_model"], "moss_image")
         checkpoints.clean_transformer_state_dict(header)
         with torch.device("meta"):
             model = MossImageDiT(**config)

@@ -1,6 +1,7 @@
 # MOSS-Image support for Forge Neo
 # A "moss" UI preset, added at runtime: PresetArch gains a member and the preset's options are registered through
 # Forge Neo's own presets.register, so they match every other preset. Same mechanism as the FLUX 3 extension.
+# Forge Neo 2.31+ already has the member (its built-in MOSS-Image support): the extension then reuses it.
 
 from enum import Enum
 
@@ -57,5 +58,11 @@ def register() -> None:
     templates: dict = {}
     presets.register(templates)
     for key, info in templates.items():
-        if _is_preset_option(key) and key not in shared.opts.data_labels:
+        if not _is_preset_option(key):
+            continue
+        if key not in shared.opts.data_labels:
             shared.opts.add_option(key, info)
+        elif key.endswith("_scheduler"):
+            # Forge Neo 2.31+ has a "moss" preset of its own, made for its built-in backend (Simple); the extension's
+            # model takes the MOSS scheduler. Only the default changes: a value saved in Settings still wins
+            shared.opts.data_labels[key].default = info.default

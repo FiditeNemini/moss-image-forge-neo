@@ -11,6 +11,12 @@
 # positive and negative passes as one batch or two and says which is which in transformer_options["cond_or_uncond"],
 # so the skipped blocks are skipped per sample (settings.uncond_skip_layers).
 #
+# MOSS Image Edit (edit.py) adds reference images: their latents, embedded like the target's, run as a prefix branch
+# under the modulation of t = 0, attending only to themselves, at RoPE (r = reference index + 1, f = 0, h and w centred
+# on their own grid). Every target and text token also attends to the references' keys and values, block by block.
+# Those depend on nothing but the references, so they are computed once per sampling run and kept for every step and
+# both CFG passes (upstream's sequence is [text, references, target]; attention is the same under any token order).
+#
 # Layers are plain torch modules: inside Forge's using_forge_operations they become Forge operations (dtype,
 # INT8 ConvRot quantization, offload, LoRA), outside it they stay torch modules for CPU tests. Differences from
 # upstream: a batch runs together instead of sample by sample (Forge never batches prompts of different lengths for
@@ -20,7 +26,7 @@
 import torch
 import torch.nn as nn
 
-from . import kernels, settings
+from . import edit, kernels, settings
 
 TIME_DIM = 256
 EPS = 1e-6
@@ -37,19 +43,36 @@ def time_embedding(sigma: torch.Tensor, dim: int = TIME_DIM) -> torch.Tensor:
     return torch.cat((phase.cos(), phase.sin()), dim=-1).float()
 
 
+def _bands(head_dim: int, base: float, device) -> torch.Tensor:
+    num_bands = head_dim // 8
+    return (1 / (base ** (torch.arange(num_bands, dtype=torch.float32) / num_bands))).to(device)
+
+
+def _grid(height: int, width: int, r: float, f: float, device) -> torch.Tensor:
+    """(H*W, 4) coordinates (r, f, h, w) of a latent grid, h and w centred on it."""
+    h, w = torch.meshgrid(torch.arange(height, device=device), torch.arange(width, device=device), indexing="ij")
+    grid = torch.stack((torch.full_like(h, r), torch.full_like(h, f), h, w), -1).flatten(0, 1).float()
+    grid[:, 2] -= (height - 1) / 2
+    grid[:, 3] -= (width - 1) / 2
+    return grid
+
+
+def _table(coordinates: torch.Tensor, head_dim: int, base: float) -> torch.Tensor:
+    phase = coordinates.unsqueeze(-1) * _bands(head_dim, base, coordinates.device)
+    return torch.cat((phase.sin(), phase.cos()), -2).flatten(-2)
+
+
 def rope_table(height: int, width: int, text_length: int, head_dim: int, base: float, device) -> torch.Tensor:
     """(H*W + T, head_dim): sin then cos of the four axes' phases, image tokens first, in float32."""
-    num_bands = head_dim // 8
-    bands = 1 / (base ** (torch.arange(num_bands, dtype=torch.float32) / num_bands))
-    bands = bands.to(device)
-    h, w = torch.meshgrid(torch.arange(height, device=device), torch.arange(width, device=device), indexing="ij")
-    image = torch.stack((torch.zeros_like(h), torch.full_like(h, text_length), h, w), -1).flatten(0, 1).float()
-    image[:, 2] -= (height - 1) / 2
-    image[:, 3] -= (width - 1) / 2
     text = torch.zeros(text_length, 4, device=device, dtype=torch.float32)
     text[:, 1] = torch.arange(text_length, device=device)
-    phase = torch.cat((image, text), 0).unsqueeze(-1) * bands
-    return torch.cat((phase.sin(), phase.cos()), -2).flatten(-2)
+    return _table(torch.cat((_grid(height, width, 0, text_length, device), text), 0), head_dim, base)
+
+
+def reference_rope(sizes, head_dim: int, base: float, device) -> torch.Tensor:
+    """(sum of h*w, head_dim) for reference latents of the given (h, w): reference i at r = i + 1, f = 0."""
+    grids = [_grid(h, w, index + 1, 0, device) for index, (h, w) in enumerate(sizes)]
+    return _table(torch.cat(grids, 0), head_dim, base)
 
 
 def rotate(x: torch.Tensor, rope: torch.Tensor) -> torch.Tensor:
@@ -61,13 +84,29 @@ def rotate(x: torch.Tensor, rope: torch.Tensor) -> torch.Tensor:
     return x * cos + torch.cat((-b, a), -1) * sin
 
 
-def attention(q, k, v, rope, heads, transformer_options=None):
-    """q, k, v (B, L, H*D) -> (B, L, H*D), RoPE on q and k, every token attending to every other."""
+def heads_qkv(q, k, v, q_norm, k_norm, rope, heads):
+    """q, k, v (B, L, H*D) -> (B, H, L, D) each, per-head norms and RoPE on q and k."""
     shape = (*q.shape[:2], heads, q.shape[-1] // heads)
-    q = rotate(q.reshape(shape), rope).transpose(1, 2)
-    k = rotate(k.reshape(shape), rope).transpose(1, 2)
+    q, k = kernels.norm_rope(q.reshape(shape), k.reshape(shape), q_norm, k_norm, rope, EPS, rotate)
     v = v.reshape(shape).transpose(1, 2)
-    return kernels.attention(q.to(v.dtype), k.to(v.dtype), v, transformer_options=transformer_options)
+    return q.transpose(1, 2).to(v.dtype), k.transpose(1, 2).to(v.dtype), v
+
+
+def with_reference(k, v, reference):
+    """k, v (B, H, L, D) followed by the references' (1, H, R, D), which every sample of the batch shares."""
+    ref_k, ref_v = (r.to(k.dtype).expand(k.shape[0], -1, -1, -1) for r in reference)
+    return torch.cat((k, ref_k), 2), torch.cat((v, ref_v), 2)
+
+
+def attention(q, k, v, q_norm, k_norm, rope, heads, transformer_options=None):
+    """q, k, v (B, L, H*D) -> (B, L, H*D), per-head norms and RoPE on q and k, every token attending to every other."""
+    q, k, v = heads_qkv(q, k, v, q_norm, k_norm, rope, heads)
+    return kernels.attention(q, k, v, transformer_options=transformer_options)
+
+
+def gated_residual(x, y, gate):
+    # one pass instead of a product, a cast and a sum; out of place, the skipped blocks keep their input
+    return torch.addcmul(x, y.to(x.dtype), gate.to(x.dtype))
 
 
 def situ(hidden, gate):
@@ -86,6 +125,7 @@ class RMSNorm(nn.Module):
 
 
 def head_norm(norm, x, heads):
+    # unused by the fused path (kernels.norm_rope); kept for NegPiP, whose block forward checks for and calls it
     return norm(x.unflatten(-1, (heads, -1))).flatten(2)
 
 
@@ -105,8 +145,8 @@ class TextBlock(nn.Module):
 
     def forward(self, x, rope, dtype, transformer_options=None):
         q, k, v = self.qkv(self.norm1(x).to(dtype)).chunk(3, -1)
-        q, k = head_norm(self.q_norm, q, self.heads), head_norm(self.k_norm, k, self.heads)
-        x = x + self.proj(attention(q, k, v, rope, self.heads, transformer_options).to(dtype)).to(x.dtype)
+        out = attention(q, k, v, self.q_norm, self.k_norm, rope, self.heads, transformer_options)
+        x = x + self.proj(out.to(dtype)).to(x.dtype)
         y = self.norm2(x).to(dtype)
         return x + self.ffn_down(situ(self.ffn_up(y), self.ffn_gate(y))).to(x.dtype)
 
@@ -137,20 +177,25 @@ class Block(nn.Module):
         self.proj["ffn_up_gate"] = nn.Linear(dim, 2 * ffn_dim, bias=False)
         self.proj["ffn_down"] = nn.Linear(ffn_dim, dim, bias=False)
 
-    def forward(self, x, rope, mod, dtype, transformer_options=None):
-        # mod (B, 6, D): attention shift, scale, gate, then the MLP's
+    def forward(self, x, rope, mod, dtype, transformer_options=None, reference=None, keep_kv=False):
+        """mod (B, 6, D): attention shift, scale, gate, then the MLP's. reference: the references' (k, v) of this
+        block, attended to as well; keep_kv also returns this call's own (k, v) (the reference branch)."""
         shift_a, scale_a, gate_a, shift_f, scale_f, gate_f = (m[:, None] for m in mod.unbind(1))
-        y = (self.norm1(x) * (1 + scale_a) + shift_a).to(dtype)
+        y = kernels.modulated_rms_norm(self.norm1, x, scale_a, shift_a, EPS).to(dtype)
         if self.fused_qkv:
             q, k, v = self.proj["qkv"](y).chunk(3, -1)
         else:
             q, k, v = self.proj["q"](y), self.proj["k"](y), self.proj["v"](y)
-        q, k = head_norm(self.q_norm, q, self.heads), head_norm(self.k_norm, k, self.heads)
-        out = self.proj["o"](attention(q, k, v, rope, self.heads, transformer_options).to(dtype))
-        x = x + (out * gate_a).to(x.dtype)
-        y = (self.norm2(x) * (1 + scale_f) + shift_f).to(dtype)
-        hidden, gate = self.proj["ffn_up_gate"](y).chunk(2, -1)
-        return x + (self.proj["ffn_down"](situ(hidden, gate)) * gate_f).to(x.dtype)
+        q, k, v = heads_qkv(q, k, v, self.q_norm, self.k_norm, rope, self.heads)
+        own = k, v
+        if reference is not None:
+            k, v = with_reference(k, v, reference)
+        out = kernels.attention(q, k, v, transformer_options=transformer_options)
+        x = gated_residual(x, self.proj["o"](out.to(dtype)), gate_a)
+        y = kernels.modulated_rms_norm(self.norm2, x, scale_f, shift_f, EPS).to(dtype)
+        out = kernels.linear_situ(self.proj["ffn_down"], self.proj["ffn_up_gate"](y), situ)
+        x = gated_residual(x, out, gate_f)
+        return (x, own) if keep_kv else x
 
 
 class MossImageDiT(nn.Module):
@@ -170,6 +215,38 @@ class MossImageDiT(nn.Module):
         self.final_norm_video = RMSNorm(dim)
         self.final_linear_video = nn.Linear(dim, latent_channels, bias=False)
         self.video_head_modulation = nn.Linear(dim, 2 * dim)
+        # (sampling run, reference latents, per-block (k, v)): see reference_kv
+        self._reference_cache = None
+
+    def clear_reference_cache(self):
+        self._reference_cache = None
+
+    def reference_kv(self, latents, dtype, res_dtype, device, transformer_options=None):
+        """Per block, the (k, v) (1, H, R, D) of the reference latents (each (1, C, h, w)), or None without any.
+
+        The references run through every block as their own sequence, modulated as at t = 0. Kept while the same
+        latent tensors come back within one sampling run (edit.generation): every step, both CFG passes.
+        """
+        if not latents:
+            return None
+        key = (edit.generation(), dtype, device)
+        cache = self._reference_cache
+        if (cache is not None and cache[0] == key and len(cache[1]) == len(latents)
+                and all(a is b for a, b in zip(cache[1], latents))):
+            return cache[2]
+        self._reference_cache = None
+        time = self.time_embedding(time_embedding(torch.zeros(1, device=device), self.freq_dim).to(dtype)).float()
+        mod = self.shared_block_modulation(time.to(dtype)).view(1, 6, -1)
+        rope = reference_rope([r.shape[-2:] for r in latents], self.dim // self.num_heads, self.rope_base, device)
+        rope = rope.to(dtype)
+        tokens = torch.cat([self.video_embedder(r.to(device=device, dtype=dtype).flatten(2).transpose(1, 2))
+                            for r in latents], 1).to(res_dtype)
+        kv = []
+        for layer in self.layers:
+            tokens, own = layer(tokens, rope, mod, dtype, transformer_options, keep_kv=True)
+            kv.append(own)
+        self._reference_cache = (key, tuple(latents), kv)
+        return kv
 
     def skipped(self, transformer_options, batch, device):
         """(B,) True where block skipping applies (the negative-prompt pass), or None when nothing is skipped."""
@@ -181,8 +258,12 @@ class MossImageDiT(nn.Module):
         flags = torch.tensor([c == UNCOND for c in chunks], device=device).repeat_interleave(per_chunk)
         return layers, flags
 
-    def forward(self, x, timestep, context, transformer_options=None, **kwargs):
-        """x (B, 128, H, W) latents, timestep (B,) = sigma, context (B, T, 4096) -> velocity (B, 128, H, W)."""
+    def forward(self, x, timestep, context, transformer_options=None, ref_latents=None, **kwargs):
+        """x (B, 128, H, W) latents, timestep (B,) = sigma, context (B, T, 4096) -> velocity (B, 128, H, W).
+
+        ref_latents: MOSS Image Edit's reference latents, each (1, 128, h, w); by default the ones Forge holds when
+        the edit setting is on (edit.references).
+        """
         b, _, h, w = x.shape
         device = x.device
         # Forge hands the inputs over in the computation dtype (k_model.apply_model); the weights may be stored in
@@ -193,6 +274,8 @@ class MossImageDiT(nn.Module):
         context = context.to(device=device, dtype=dtype)
         if context.shape[0] != b:
             context = context.expand(b, -1, -1)
+        references = self.reference_kv(edit.references() if ref_latents is None else ref_latents, dtype, res_dtype,
+                                       device, transformer_options)
 
         time = self.time_embedding(time_embedding(timestep.reshape(-1).expand(b), self.freq_dim).to(dtype)).float()
         mod = self.shared_block_modulation(time.to(dtype)).view(b, 6, -1)
@@ -207,13 +290,15 @@ class MossImageDiT(nn.Module):
 
         skip = self.skipped(transformer_options, b, device)
         for index, layer in enumerate(self.layers):
+            # no extra argument without references: other extensions' block forwards (NegPiP) keep working
+            extra = {} if references is None else {"reference": references[index]}
             if skip is not None and index in skip[0]:
                 if bool(skip[1].all()):
                     continue
                 tokens = torch.where(skip[1][:, None, None], tokens,
-                                     layer(tokens, rope, mod, dtype, transformer_options))
+                                     layer(tokens, rope, mod, dtype, transformer_options, **extra))
             else:
-                tokens = layer(tokens, rope, mod, dtype, transformer_options)
+                tokens = layer(tokens, rope, mod, dtype, transformer_options, **extra)
 
         out = self.final_norm_video(tokens[:, :image_tokens]) * (1 + head[:, 1, None]) + head[:, 0, None]
         out = self.final_linear_video(out.to(dtype))

@@ -21,6 +21,7 @@ try:
         from forge_moss.native import patches
 
         patches.apply()
+        patches.register_callbacks()
         ENABLED = True
 except Exception:
     print("[MOSS-Image] failed to enable, Forge Neo is unchanged:")
