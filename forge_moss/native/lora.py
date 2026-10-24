@@ -7,6 +7,10 @@
 # The hook wraps model_lora_keys_unet where sd_forge_lora (Forge's built-in LoRA extension) and backend.patcher.lora
 # hold it, and only adds keys for a MOSS-Image DiT; everything else gets Forge's map untouched. Same mechanism as the
 # FLUX 3 extension's lora.py.
+#
+# MOSS Image Edit's "moss-edit-lora" files name their tensors <layer>.lora_A / <layer>.lora_B, a format Forge reads;
+# their alpha sits in an adapter_config (edit.adapter_alphas), which sd_forge_lora's load_lora_for_models gets as
+# alpha tensors.
 
 import re
 import sys
@@ -54,8 +58,25 @@ def _wrap(original):
     return model_lora_keys_unet
 
 
+def _wrap_loader(original):
+    if getattr(original, "_moss_image", False):
+        return original
+
+    def load_lora_for_models(model, clip, lora, *args, **kwargs):
+        if model is not None and _is_moss_image(getattr(model, "model", None)):
+            from . import edit
+
+            filename = kwargs.get("filename", args[2] if len(args) > 2 else None)
+            lora = edit.with_alphas(lora, edit.adapter_alphas(filename))
+        return original(model, clip, lora, *args, **kwargs)
+
+    load_lora_for_models._moss_image = True
+    return load_lora_for_models
+
+
 def install() -> bool:
-    """Wrap the key map in backend.patcher.lora and, once it is imported, in sd_forge_lora's networks."""
+    """Wrap the key map in backend.patcher.lora and, once it is imported, the key map and the LoRA load in
+    sd_forge_lora's networks."""
     global _hooked
     from backend.patcher import lora as forge_lora
 
@@ -64,6 +85,8 @@ def install() -> bool:
     if networks is None or not hasattr(networks, "model_lora_keys_unet"):
         return False
     networks.model_lora_keys_unet = _wrap(networks.model_lora_keys_unet)
+    if hasattr(networks, "load_lora_for_models"):
+        networks.load_lora_for_models = _wrap_loader(networks.load_lora_for_models)
     _hooked = True
     return True
 

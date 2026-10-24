@@ -31,8 +31,9 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 ## 🆕 What's New
 
-### v0.1.4 - Choose the Backend
+### v0.1.4 - Image Editing and Backend Choice
 
+- **Edit pictures with an instruction** - the [MOSS Image Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA by chinoll works in img2img: give the picture, say what to change, and the rest stays ([how to use it](#%EF%B8%8F-image-editing)) ([#5](https://github.com/eduardoabreu81/moss-image-forge-neo/issues/5))
 - **Extension or Forge built-in** - on Forge Neo 2.31 and newer, **Settings → Stable Diffusion → [MOSS-Image] Backend** picks who runs MOSS-Image checkpoints: the extension, or Forge Neo's own support. The change applies at the next generation, with no restart
 
 ### v0.1.3 - Forge Neo 2.31 and Faster Generation
@@ -95,6 +96,19 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 - Put a picture in img2img and describe the result: with **Denoising strength** around 0.6 the scene stays and the details you change follow the prompt
 
+### ✏️ Image Editing
+
+- The [MOSS Image Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA by chinoll changes what you ask and keeps the rest of the picture: colors, clothes, lighting, seasons, style
+- Download `adapter_model.safetensors`, rename it to something clearer such as `moss_image_edit.safetensors` and put it in `models/Lora`
+- Turn on **Settings → Stable Diffusion → [MOSS-Image] Enable Reference** - pinning it to **Quicksettings** helps if you switch often
+- In img2img, put the picture in, set **Denoising strength** to 1, and write the change as the prompt with the LoRA, for example `<lora:moss_image_edit:1>Change only the pink dress to bright red. Keep the character, face, hair, pose, background and composition unchanged.`
+- Tested with Euler, MOSS, 30 steps, CFG 4, 1024x1024, the authors' settings
+- The picture goes to the model scaled down to 512 on its long side; change it under **[MOSS-Image] Reference Maximum Side Length**
+- Works with the [8-step LoRA](#-8-step-lora) too: add both LoRAs to the prompt and use 8 steps, CFG 1 - about a minute per 1024x1024 picture on an RTX 2070
+- The LoRA was trained mostly on illustrations: on photos the change is made, but the rest of the scene is kept more loosely - the framing, the background or the object's shape can change
+- More pictures can go in through **ImageStitch Integrated** (up to 4 in all), but in our test with two the result turned into a collage, and on an 8 GB card it took about ten times longer - one picture is what works today
+- Turn the setting off for plain img2img - with it on, the img2img picture is a reference, not a starting point
+
 ### 🧭 Upstream's Guidance
 
 - The negative-prompt pass of CFG leaves out block 22 of the model, as the official pipeline does by default
@@ -138,7 +152,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 7. Pick the **moss** UI preset, the checkpoint, and the text encoder and autoencoder under **VAE / Text Encoder**
 
 > [!Note]
-> Tested with the INT8 files of the SFT and Base models, on an NVIDIA A40 and an RTX A6000. The BF16 files of the same repository have not been tested yet. The 8-step LoRA was tested with the INT8 SFT model on an RTX 2070 (8 GB).
+> Tested with the INT8 files of the SFT and Base models, on an NVIDIA A40 and an RTX A6000. The BF16 files of the same repository have not been tested yet. The 8-step LoRA and the editing LoRA were tested with the INT8 SFT model on an RTX 2070 (8 GB).
 
 ---
 
@@ -168,6 +182,7 @@ The **moss** preset sets these values; change them on the **MOSS** page of **Set
 - **[ComfyUI](https://github.com/comfyanonymous/ComfyUI)** by comfyanonymous and Comfy-Org - the Qwen3.5 implementation this port follows, and the INT8 files
 - **[Qwen3.5](https://huggingface.co/Qwen)** by the Qwen team - the text encoder
 - **[lodestones](https://huggingface.co/lodestones/MOSS-Image-SFT-8-steps-dmd)** - the 8-step LoRA
+- **[chinoll](https://huggingface.co/chinoll/Moss-Image-Edit)** - the MOSS Image Edit LoRA and its [reference code](https://github.com/Chenkin-x/Moss-Image-Edit)
 - **[Transformers](https://github.com/huggingface/transformers)** by Hugging Face - the Qwen3.5 reference
 
 The MOSS-Image weights are released by the OpenMOSS Team under the Apache License 2.0; this extension does not include them.
