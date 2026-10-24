@@ -10,7 +10,7 @@ from backend import loader
 from backend.nn import krea
 from huggingface_guess import detection, model_list
 
-from . import model, text_encoder
+from . import model, settings, text_encoder
 from .checkpoints import check_vae, clean_transformer_state_dict, text_encoder_prefix
 from .engine import MossImageEngine
 from .transformer import MossImageDiT
@@ -24,7 +24,8 @@ def _hook_detection() -> None:
     original = detection.detect_unet_config
 
     def detect_unet_config(state_dict, key_prefix, *args, **kwargs):
-        dit_config = model.detect(state_dict, key_prefix)
+        # with "[MOSS-Image] Backend" on Forge built-in, the checkpoint is left to Forge Neo's own MOSS-Image guess
+        dit_config = model.detect(state_dict, key_prefix) if settings.use_extension() else None
         if dit_config is not None:
             return dit_config
         return original(state_dict, key_prefix, *args, **kwargs)

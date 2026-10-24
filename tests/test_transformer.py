@@ -4,6 +4,8 @@
 # the built module against the real checkpoints' headers (tests/fixtures).
 
 import json
+import sys
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -96,6 +98,21 @@ class TestTransformer(unittest.TestCase):
         self.assertEqual(settings.uncond_skip_layers(42), frozenset({22}))
         self.assertEqual(settings.parse("22, 24;x 99 -1", 42), frozenset({22, 24}))
         self.assertEqual(settings.parse("", 42), frozenset())
+
+    def test_backend(self):
+        def shared(choice):
+            opts = types.SimpleNamespace(**{settings.BACKEND_OPTION: choice})
+            return mock.patch.dict(sys.modules, {"modules": types.ModuleType("modules"),
+                                                 "modules.shared": types.SimpleNamespace(opts=opts)})
+
+        # no built-in MOSS-Image in Forge (or no Forge at all): the extension, whatever the option says
+        with shared(settings.BUILT_IN):
+            self.assertTrue(settings.use_extension())
+        with mock.patch.object(settings, "forge_has_built_in", return_value=True):
+            with shared(settings.BUILT_IN):
+                self.assertFalse(settings.use_extension())
+            with shared(settings.EXTENSION):
+                self.assertTrue(settings.use_extension())
 
 
 class TestRealCheckpoints(unittest.TestCase):

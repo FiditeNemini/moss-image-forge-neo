@@ -31,6 +31,10 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 ## 🆕 What's New
 
+### v0.1.4 - Choose the Backend
+
+- **Extension or Forge built-in** - on Forge Neo 2.31 and newer, **Settings → Stable Diffusion → [MOSS-Image] Backend** picks who runs MOSS-Image checkpoints: the extension, or Forge Neo's own support. The change applies at the next generation, with no restart
+
 ### v0.1.3 - Forge Neo 2.31 and Faster Generation
 
 - **Works with Forge Neo 2.31** - Forge Neo now has MOSS-Image support of its own, and loading a checkpoint failed with `unexpected keyword argument 'freq_dim'` ([#4](https://github.com/eduardoabreu81/moss-image-forge-neo/issues/4)). With the extension enabled, MOSS-Image checkpoints run on the extension; disable it to use Forge Neo's built-in support
@@ -97,7 +101,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 - Change it under **Settings → Stable Diffusion → [MOSS-Image] Blocks skipped in the negative-prompt pass**: other blocks, comma-separated, or empty for plain CFG
 - OpenMOSS says blocks 22, 24 and 26 all help the picture, so `22, 24, 26` is worth a try
 - Plain CFG looks more realistic, but some details can fall apart
-- Forge Neo 2.31 also has **[Moss-Image] Skip Layer Guidance** settings: they are for its built-in support and do nothing while the extension is enabled
+- Forge Neo 2.31 also has **[Moss-Image] Skip Layer Guidance** settings: they apply when **[MOSS-Image] Backend** is set to Forge built-in, and do nothing while the extension runs the checkpoint
 
 ### ⚡ 8-Step LoRA
 
