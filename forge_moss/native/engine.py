@@ -38,6 +38,9 @@ class MossImageEngine(ForgeDiffusionEngine):
 
         # not FLUX.2: its Klein flag would swap the Automatic schedule for the resolution-dependent Flux2 one
         dynamic_args.klein = False
+        # Forge's own MOSS-Image flag (2.31+) turns on its Skip Layer Guidance by checkpoint path; this DiT skips the
+        # negative-pass blocks itself, so the extension's model never gets it, wherever the extension is installed
+        dynamic_args.moss = False
         self.is_moss_image = True
         # Forge's LoRA extension is imported by now, whatever the extensions' load order was
         lora.ensure_installed()

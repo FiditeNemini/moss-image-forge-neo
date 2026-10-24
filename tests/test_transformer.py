@@ -102,9 +102,11 @@ class TestRealCheckpoints(unittest.TestCase):
     def check(self, name, fused):
         header = json.loads((FIXTURES / f"{name}.shapes.json").read_text())
         config = detect.detect(header)
-        self.assertEqual(config, {"image_model": "moss_image", "dim": 3072, "num_heads": 24, "num_layers": 42,
+        self.assertEqual(config, {"image_model": detect.IMAGE_MODEL, "dim": 3072, "num_heads": 24, "num_layers": 42,
                                   "ffn_dim": 8192, "text_dim": 4096, "freq_dim": 256, "latent_channels": 128,
                                   "fused_qkv": fused})
+        # Forge Neo 2.31's built-in guess matches "moss_image" and would take this config to its own DiT (issue #4)
+        self.assertNotEqual(config["image_model"], "moss_image")
         checkpoints.clean_transformer_state_dict(header)
         with torch.device("meta"):
             model = MossImageDiT(**config)

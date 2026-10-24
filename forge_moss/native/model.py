@@ -11,7 +11,8 @@ from . import detect as detection
 from .scheduler import SHIFT
 
 # absolute path: the loader joins it with its own huggingface folder, and os.path.join keeps an absolute second part.
-# The folder name must not contain "klein" (Forge Neo's FLUX.2 Klein handling keys on that word)
+# The folder name must not contain "klein" (Forge Neo's FLUX.2 Klein handling keys on that word), nor "MOSS-Image"
+# (Forge's built-in Skip Layer Guidance keys on that one; the DiT does its own negative-pass skipping)
 CONFIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "huggingface", "moss-image")
 TEXT_ENCODER = "qwen35_9b"
 
@@ -19,7 +20,7 @@ TEXT_ENCODER = "qwen35_9b"
 class MossImage(BASE):
     huggingface_repo = CONFIG_DIR
 
-    unet_config = {"image_model": "moss_image"}
+    unet_config = {"image_model": detection.IMAGE_MODEL}
 
     # rectified flow; the DiT multiplies the time by 1000 itself, so the timestep is the sigma
     sampling_settings = {"shift": SHIFT, "multiplier": 1.0}

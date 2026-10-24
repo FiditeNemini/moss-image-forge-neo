@@ -31,6 +31,11 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 ## 🆕 What's New
 
+### v0.1.3 - Forge Neo 2.31 and Faster Generation
+
+- **Works with Forge Neo 2.31** - Forge Neo now has MOSS-Image support of its own, and loading a checkpoint failed with `unexpected keyword argument 'freq_dim'` ([#4](https://github.com/eduardoabreu81/moss-image-forge-neo/issues/4)). With the extension enabled, MOSS-Image checkpoints run on the extension; disable it to use Forge Neo's built-in support
+- **About 2× faster** with comfy-kitchen - fused norm, RoPE and activation kernels by [RichyRich515](https://github.com/RichyRich515) ([#3](https://github.com/eduardoabreu81/moss-image-forge-neo/pull/3)): 16.7 s → 8.0 s per 1024×1024 picture on an RTX 4090
+
 ### v0.1.2 - Layouts with Dynamic Prompts
 
 - **Layouts work with sd-dynamic-prompts installed** - it takes the `{ }` out of a JSON layout before the model reads it; MOSS-Image now puts them back, so the picture is the same as without it
@@ -92,6 +97,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 - Change it under **Settings → Stable Diffusion → [MOSS-Image] Blocks skipped in the negative-prompt pass**: other blocks, comma-separated, or empty for plain CFG
 - OpenMOSS says blocks 22, 24 and 26 all help the picture, so `22, 24, 26` is worth a try
 - Plain CFG looks more realistic, but some details can fall apart
+- Forge Neo 2.31 also has **[Moss-Image] Skip Layer Guidance** settings: they are for its built-in support and do nothing while the extension is enabled
 
 ### ⚡ 8-Step LoRA
 

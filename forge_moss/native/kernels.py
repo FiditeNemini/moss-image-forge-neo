@@ -38,8 +38,9 @@ def _situ_eager(x):
     return (4.0 * torch.tanh(gate / 4.0) * torch.sigmoid(gate)) * (25.0 * torch.tanh(hidden / 25.0))
 
 
-# Forge Neo registers no SiTU input activation of its own; register it here so the INT8 ConvRot path folds SiTU into
-# comfy-kitchen's activation quantization (0.2.38+) without a patched Forge. Forge reads this dict by name per call
+# Forge Neo before 2.31 registers no SiTU input activation of its own; register it here so the INT8 ConvRot path folds
+# SiTU into comfy-kitchen's activation quantization (0.2.38+) without a patched Forge. Forge reads this dict by name per
+# call
 if _forge_linear_input_act is not None and "situ" not in _forge_input_acts and _ck_version() >= (0, 2, 38):
     _forge_input_acts["situ"] = _situ_eager
 
@@ -52,9 +53,13 @@ def cast_to(weight, dtype=None, device=None):
     return weight.to(dtype=dtype, device=device)
 
 
+# an older comfy-kitchen lacks the fused norm kernels: the DiT then stays on the eager code
+_ck_fused = _ck is not None and all(hasattr(_ck, name) for name in ("rms_adaln", "rms_rope_split_half"))
+
+
 def _fused(x):
     # comfy-kitchen's fused kernels have no autograd: GPU inference inside Forge only, the CPU tests stay eager
-    return _ck is not None and _forge_attention is not None and x.is_cuda and not torch.is_grad_enabled()
+    return _ck_fused and _forge_attention is not None and x.is_cuda and not torch.is_grad_enabled()
 
 
 def modulated_rms_norm(norm, x, scale, shift, eps):
