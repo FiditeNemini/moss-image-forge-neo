@@ -61,13 +61,17 @@ def rotate(x: torch.Tensor, rope: torch.Tensor) -> torch.Tensor:
     return x * cos + torch.cat((-b, a), -1) * sin
 
 
-def attention(q, k, v, rope, heads, transformer_options=None):
-    """q, k, v (B, L, H*D) -> (B, L, H*D), RoPE on q and k, every token attending to every other."""
+def attention(q, k, v, q_norm, k_norm, rope, heads, transformer_options=None):
+    """q, k, v (B, L, H*D) -> (B, L, H*D), per-head norms and RoPE on q and k, every token attending to every other."""
     shape = (*q.shape[:2], heads, q.shape[-1] // heads)
-    q = rotate(q.reshape(shape), rope).transpose(1, 2)
-    k = rotate(k.reshape(shape), rope).transpose(1, 2)
-    v = v.reshape(shape).transpose(1, 2)
+    q, k = kernels.norm_rope(q.reshape(shape), k.reshape(shape), q_norm, k_norm, rope, EPS, rotate)
+    q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.reshape(shape).transpose(1, 2)
     return kernels.attention(q.to(v.dtype), k.to(v.dtype), v, transformer_options=transformer_options)
+
+
+def gated_residual(x, y, gate):
+    # one pass instead of a product, a cast and a sum; out of place, the skipped blocks keep their input
+    return torch.addcmul(x, y.to(x.dtype), gate.to(x.dtype))
 
 
 def situ(hidden, gate):
@@ -86,6 +90,7 @@ class RMSNorm(nn.Module):
 
 
 def head_norm(norm, x, heads):
+    # unused by the fused path (kernels.norm_rope); kept for NegPiP, whose block forward checks for and calls it
     return norm(x.unflatten(-1, (heads, -1))).flatten(2)
 
 
@@ -105,8 +110,8 @@ class TextBlock(nn.Module):
 
     def forward(self, x, rope, dtype, transformer_options=None):
         q, k, v = self.qkv(self.norm1(x).to(dtype)).chunk(3, -1)
-        q, k = head_norm(self.q_norm, q, self.heads), head_norm(self.k_norm, k, self.heads)
-        x = x + self.proj(attention(q, k, v, rope, self.heads, transformer_options).to(dtype)).to(x.dtype)
+        out = attention(q, k, v, self.q_norm, self.k_norm, rope, self.heads, transformer_options)
+        x = x + self.proj(out.to(dtype)).to(x.dtype)
         y = self.norm2(x).to(dtype)
         return x + self.ffn_down(situ(self.ffn_up(y), self.ffn_gate(y))).to(x.dtype)
 
@@ -140,17 +145,16 @@ class Block(nn.Module):
     def forward(self, x, rope, mod, dtype, transformer_options=None):
         # mod (B, 6, D): attention shift, scale, gate, then the MLP's
         shift_a, scale_a, gate_a, shift_f, scale_f, gate_f = (m[:, None] for m in mod.unbind(1))
-        y = (self.norm1(x) * (1 + scale_a) + shift_a).to(dtype)
+        y = kernels.modulated_rms_norm(self.norm1, x, scale_a, shift_a, EPS).to(dtype)
         if self.fused_qkv:
             q, k, v = self.proj["qkv"](y).chunk(3, -1)
         else:
             q, k, v = self.proj["q"](y), self.proj["k"](y), self.proj["v"](y)
-        q, k = head_norm(self.q_norm, q, self.heads), head_norm(self.k_norm, k, self.heads)
-        out = self.proj["o"](attention(q, k, v, rope, self.heads, transformer_options).to(dtype))
-        x = x + (out * gate_a).to(x.dtype)
-        y = (self.norm2(x) * (1 + scale_f) + shift_f).to(dtype)
-        hidden, gate = self.proj["ffn_up_gate"](y).chunk(2, -1)
-        return x + (self.proj["ffn_down"](situ(hidden, gate)) * gate_f).to(x.dtype)
+        out = attention(q, k, v, self.q_norm, self.k_norm, rope, self.heads, transformer_options)
+        x = gated_residual(x, self.proj["o"](out.to(dtype)), gate_a)
+        y = kernels.modulated_rms_norm(self.norm2, x, scale_f, shift_f, EPS).to(dtype)
+        out = kernels.linear_situ(self.proj["ffn_down"], self.proj["ffn_up_gate"](y), situ)
+        return gated_residual(x, out, gate_f)
 
 
 class MossImageDiT(nn.Module):
