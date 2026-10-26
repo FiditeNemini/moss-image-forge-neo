@@ -88,7 +88,6 @@ def register_settings() -> None:
 
     from . import settings
 
-    settings.register_category()
     if OPTION not in shared.opts.data_labels:
         shared.opts.add_option(OPTION, OptionInfo(DEFAULT, LABEL, gr.Radio, {"choices": (INT8, STORED)},
                                                   section=settings.SECTION, category_id=settings.CATEGORY)

@@ -131,7 +131,6 @@ def register_settings() -> None:
 
     from . import settings
 
-    settings.register_category()
     if OPTION not in shared.opts.data_labels:
         shared.opts.add_option(OPTION, OptionInfo(False, LABEL, section=settings.SECTION, category_id=settings.CATEGORY)
                                .info(INFO).info(INFO_LORA)

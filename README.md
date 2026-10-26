@@ -38,7 +38,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 ### v0.1.4 - Image Editing and Backend Choice
 
 - **Edit pictures with an instruction** - the [MOSS Image Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA by chinoll works in img2img: give the picture, say what to change, and the rest stays ([how to use it](#%EF%B8%8F-image-editing)) ([#5](https://github.com/eduardoabreu81/moss-image-forge-neo/issues/5))
-- **Extension or Forge built-in** - on Forge Neo 2.31 and newer, **Settings → MOSS-Image → [MOSS-Image] Backend** picks who runs MOSS-Image checkpoints: the extension, or Forge Neo's own support. The change applies at the next generation, with no restart
+- **Extension or Forge built-in** - on Forge Neo 2.31 and newer, **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Backend** picks who runs MOSS-Image checkpoints: the extension, or Forge Neo's own support. The change applies at the next generation, with no restart
 
 ### v0.1.3 - Forge Neo 2.31 and Faster Generation
 
@@ -104,10 +104,10 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 - The [MOSS Image Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA by chinoll changes what you ask and keeps the rest of the picture: colors, clothes, lighting, seasons, style
 - Download `adapter_model.safetensors`, rename it to something clearer such as `moss_image_edit.safetensors` and put it in `models/Lora`
-- Turn on **Settings → MOSS-Image → [MOSS-Image] Enable Reference** - pinning it to **Quicksettings** helps if you switch often
+- Turn on **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Enable Reference** - pinning it to **Quicksettings** helps if you switch often
 - In img2img, put the picture in, set **Denoising strength** to 1, and write the change as the prompt with the LoRA, for example `<lora:moss_image_edit:1>Change only the pink dress to bright red. Keep the character, face, hair, pose, background and composition unchanged.`
 - Tested with Euler, MOSS, 30 steps, CFG 4, 1024x1024, the authors' settings
-- The picture goes to the model scaled down to 512 on its long side; change it under **Settings → MOSS-Image → [MOSS-Image] Reference Maximum Side Length**
+- The picture goes to the model scaled down to 512 on its long side; change it under **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Reference Maximum Side Length**
 - Works with the [8-step LoRA](#-8-step-lora) too: add both LoRAs to the prompt and use 8 steps, CFG 1 - about a minute per 1024x1024 picture on an RTX 2070
 - The LoRA was trained mostly on illustrations: on photos the change is made, but the rest of the scene is kept more loosely - the framing, the background or the object's shape can change
 - More pictures can go in through **ImageStitch Integrated** (up to 4 in all), but in our test with two the result turned into a collage, and on an 8 GB card it took about ten times longer - one picture is what works today
@@ -116,7 +116,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 ### 🧭 Upstream's Guidance
 
 - The negative-prompt pass of CFG leaves out block 22 of the model, as the official pipeline does by default
-- Change it under **Settings → MOSS-Image → [MOSS-Image] Blocks skipped in the negative-prompt pass**: other blocks, comma-separated, or empty for plain CFG
+- Change it under **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Blocks skipped in the negative-prompt pass**: other blocks, comma-separated, or empty for plain CFG
 - OpenMOSS says blocks 22, 24 and 26 all help the picture, so `22, 24, 26` is worth a try
 - Plain CFG looks more realistic, but some details can fall apart
 - Forge Neo 2.31 also has **[Moss-Image] Skip Layer Guidance** settings: they apply when **[MOSS-Image] Backend** is set to Forge built-in, and do nothing while the extension runs the checkpoint
@@ -139,7 +139,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 ### 🪶 INT4 Checkpoints
 
 - The small INT4 ConvRot checkpoints shared by the community (about 3 GB, made for 8 GB cards) now give a cleaner picture: MOSS-Image runs them with more precision, from the same file and in the same memory
-- Pick how under **Settings → MOSS-Image → [MOSS-Image] Activations of INT4 checkpoints**: **INT8 (W4A8)**, the default, or **As stored (W4A4)**, the way the file asks for. The change applies at the next generation, with no restart
+- Pick how under **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Activations of INT4 checkpoints**: **INT8 (W4A8)**, the default, or **As stored (W4A4)**, the way the file asks for. The change applies at the next generation, with no restart
 - It is a little slower: on an RTX 2070, an 896x1152 picture at 8 steps took 15 s instead of 13 s
 - It works with both choices of **[MOSS-Image] Backend**, and other checkpoints are not affected
 - An INT4 file still loses some detail next to an INT8 one: if your card has room, the INT8 file of the same model gives the best picture

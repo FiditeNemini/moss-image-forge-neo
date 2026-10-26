@@ -6,17 +6,10 @@ OPTION = "moss_uncond_skip_layers"
 DEFAULT = "22"
 LABEL = "[MOSS-Image] Blocks skipped in the negative-prompt pass"
 INFO = "zero-based, comma-separated; 22 = upstream's guidance (24 and 26 also help); empty = plain CFG"
-# A settings page and category of its own, like Forge Neo's Nunchaku one, so the options are not buried among the
-# other models' in "Stable Diffusion" (options_section splits ("id", "Label", "category") the same way)
+# A settings page of its own under the "Stable Diffusion" category, Settings > Stable Diffusion > MOSS-Image, as the
+# Qwen-Image 2.1 extension does (options_section splits ("id", "Label", "category") the same way)
 SECTION = ("moss_image", "MOSS-Image")
-CATEGORY = "moss_image"
-CATEGORY_LABEL = "MOSS-Image"
-
-
-def register_category() -> None:
-    from modules.options import categories
-
-    categories.register_category(CATEGORY, CATEGORY_LABEL)
+CATEGORY = "sd"
 
 
 # Forge Neo 2.31+ has MOSS-Image support of its own: who runs the MOSS-Image checkpoints. With "Forge built-in" the
@@ -83,7 +76,6 @@ def register() -> None:
     from modules import shared
     from modules.options import OptionInfo
 
-    register_category()
     if forge_has_built_in() and BACKEND_OPTION not in shared.opts.data_labels:
         import gradio as gr
 
