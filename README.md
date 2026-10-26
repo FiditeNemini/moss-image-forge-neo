@@ -125,6 +125,13 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 - It is a work in progress: the picture is sharp and the writing is readable, but fine details and text are a little less clean than with 50 steps. With 4 steps the picture came out washed out, so stay at 8
 - If you prefer `lora_latest.safetensors`, the author recommends strength 0.7
 
+### 🚀 4-Step LoRA
+
+- The 4-step LoRA from [akhaliq](https://huggingface.co/akhaliq/MOSS-Image-SFT-4-steps) works with the SFT model: pictures in 4 steps, with no negative prompt pass - use it instead of the 8-step one, not together
+- Download `lora.safetensors`, rename it to `MOSS-Image-SFT-4-steps.safetensors`, put it in `models/Lora` and add it to the prompt: `<lora:MOSS-Image-SFT-4-steps:1>`
+- Set **Sampler** to Euler, **Schedule type** to MOSS, **Steps** to 4 and **CFG** to 1
+- In our test the pictures came out coherent and the Chinese and English text was readable, a little softer than with 8 steps
+
 ### 🛡️ Safe by Design
 
 - Changes no Forge Neo file - remove the extension and everything is as it was
@@ -171,6 +178,10 @@ The **moss** preset sets these values; change them on the **MOSS** page of **Set
 - Write full captions - the scene, the objects, where they are, and the exact text in quotes
 - Use Euler and the MOSS schedule; Simple gives nearly the same steps
 - New text encoder files appear in the list after a restart of Forge Neo
+- Write "a young woman in her twenties" instead of "girl": MOSS draws a child for "girl"
+- Text of up to about 40 words comes out right; a full page of text is too much for the model
+- Pictures of 1 to 2 megapixels work best
+- Faint vertical stripes on a smooth sky or wall are a known quirk of the model; two DeBand LoRAs by MATLOWAI used together, both at strength 1, are reported to remove them
 - Before uninstalling, switch the UI preset to another one
 
 ---
@@ -182,6 +193,7 @@ The **moss** preset sets these values; change them on the **MOSS** page of **Set
 - **[ComfyUI](https://github.com/comfyanonymous/ComfyUI)** by comfyanonymous and Comfy-Org - the Qwen3.5 implementation this port follows, and the INT8 files
 - **[Qwen3.5](https://huggingface.co/Qwen)** by the Qwen team - the text encoder
 - **[lodestones](https://huggingface.co/lodestones/MOSS-Image-SFT-8-steps-dmd)** - the 8-step LoRA
+- **[akhaliq](https://huggingface.co/akhaliq/MOSS-Image-SFT-4-steps)** - the 4-step LoRA
 - **[chinoll](https://huggingface.co/chinoll/Moss-Image-Edit)** - the MOSS Image Edit LoRA and its [reference code](https://github.com/Chenkin-x/Moss-Image-Edit)
 - **[Transformers](https://github.com/huggingface/transformers)** by Hugging Face - the Qwen3.5 reference
 
