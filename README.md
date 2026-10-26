@@ -31,6 +31,10 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 ## 🆕 What's New
 
+### v0.1.5 - Cleaner INT4 Checkpoints
+
+- **INT4 checkpoints look better** - the small community INT4 files now run with more precision by default, from the same file and in the same memory; a setting brings back the old way ([details](#-int4-checkpoints))
+
 ### v0.1.4 - Image Editing and Backend Choice
 
 - **Edit pictures with an instruction** - the [MOSS Image Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA by chinoll works in img2img: give the picture, say what to change, and the rest stays ([how to use it](#%EF%B8%8F-image-editing)) ([#5](https://github.com/eduardoabreu81/moss-image-forge-neo/issues/5))
@@ -132,6 +136,14 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 - Set **Sampler** to Euler, **Schedule type** to MOSS, **Steps** to 4 and **CFG** to 1
 - In our test the pictures came out coherent and the Chinese and English text was readable, a little softer than with 8 steps
 
+### 🪶 INT4 Checkpoints
+
+- The small INT4 ConvRot checkpoints shared by the community (about 3 GB, made for 8 GB cards) now give a cleaner picture: MOSS-Image runs them with more precision, from the same file and in the same memory
+- Pick how under **Settings → MOSS-Image → [MOSS-Image] Activations of INT4 checkpoints**: **INT8 (W4A8)**, the default, or **As stored (W4A4)**, the way the file asks for. The change applies at the next generation, with no restart
+- It is a little slower: on an RTX 2070, an 896x1152 picture at 8 steps took 15 s instead of 13 s
+- It works with both choices of **[MOSS-Image] Backend**, and other checkpoints are not affected
+- An INT4 file still loses some detail next to an INT8 one: if your card has room, the INT8 file of the same model gives the best picture
+
 ### 🛡️ Safe by Design
 
 - Changes no Forge Neo file - remove the extension and everything is as it was
@@ -159,7 +171,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 7. Pick the **moss** UI preset, the checkpoint, and the text encoder and autoencoder under **VAE / Text Encoder**
 
 > [!Note]
-> Tested with the INT8 files of the SFT and Base models, on an NVIDIA A40 and an RTX A6000. The BF16 files of the same repository have not been tested yet. The 8-step LoRA and the editing LoRA were tested with the INT8 SFT model on an RTX 2070 (8 GB).
+> Tested with the INT8 files of the SFT and Base models, on an NVIDIA A40 and an RTX A6000. The BF16 files of the same repository have not been tested yet. The 8-step LoRA and the editing LoRA were tested with the INT8 SFT model on an RTX 2070 (8 GB), and the INT4 setting with a community INT4 checkpoint on the same card.
 
 ---
 
