@@ -31,6 +31,10 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 ## 🆕 What's New
 
+### v0.1.6 - Layouts with LoRA Trigger Words
+
+- **Layouts with a LoRA's trigger word after them** - with sd-dynamic-prompts on, a layout followed by a word such as a LoRA's trigger (`... "bbox_format":"yxyx" venusbody`), or by the commas a removed `<lora:...>` tag leaves, reached the model with its `{ }` still missing; the layout is now put back together and the words come right after it
+
 ### v0.1.5 - Cleaner INT4 Checkpoints
 
 - **INT4 checkpoints look better** - the small community INT4 files now run with more precision by default, from the same file and in the same memory; a setting brings back the old way ([details](#-int4-checkpoints))

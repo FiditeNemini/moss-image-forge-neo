@@ -9,6 +9,10 @@
 # "summary" (it ends where the next top-level key starts), and around each element of a list of key-value pairs (a new
 # element starts when a key repeats). Only the braces are added, the rest of the text is kept as it is, and the
 # result is used only when it parses as a layout.
+#
+# Forge removes <lora:...> tags before the text engine, so a LoRA's trigger word, and the commas around the tag, can
+# follow the layout: "bbox_format":"yxyx",,venusbody,, . The layout is rebuilt from the start of the prompt and
+# whatever follows it, trimmed of stray commas and spaces, comes after the JSON, one space apart.
 
 import json
 import re
@@ -19,7 +23,8 @@ _SCALAR_END = re.compile(r'[\s:,\[\]"{}]')
 
 
 def _tokens(text: str) -> list[tuple[str, int, int]]:
-    """(kind, start, end) for each JSON token: "s" a string, ":" "," "[" "]" punctuation, "v" any other scalar."""
+    """(kind, start, end) for each JSON token: "s" a string, ":" "," "[" "]" punctuation, "v" any other scalar.
+    Stops at a brace or an unterminated string: what comes there is no stripped layout, at most words after one."""
     tokens, i, n = [], 0, len(text)
     while i < n:
         c = text[i]
@@ -30,14 +35,14 @@ def _tokens(text: str) -> list[tuple[str, int, int]]:
             while j < n and text[j] != '"':
                 j += 2 if text[j] == "\\" else 1
             if j >= n:
-                raise ValueError("unterminated string")
+                break
             tokens.append(("s", i, j + 1))
             i = j + 1
         elif c in ":,[]":
             tokens.append((c, i, i + 1))
             i += 1
         elif c in "{}":
-            raise ValueError("braces left: not a stripped layout")
+            break
         else:
             m = _SCALAR_END.search(text, i)
             j = m.start() if m else n
@@ -101,18 +106,17 @@ class _Rebuilder:
         self.inserts.append((self.tokens[i - 1][2], "}"))
         return i
 
-    def rebuild(self) -> str:
-        end = self.members(0, stop=frozenset(), split_on_repeat=False)
-        if end != len(self.tokens):
-            raise ValueError("text after the layout")
+    def rebuild(self) -> tuple[str, str]:
+        """The layout at the start of the text with its braces back, and the text after it."""
+        end = self.tokens[self.members(0, stop=frozenset(), split_on_repeat=False) - 1][2]
         out, last = [], 0
         # stable by position: at one spot an inner brace was recorded before the outer one
         for pos, brace in sorted(self.inserts, key=lambda item: item[0]):
             out.append(self.text[last:pos])
             out.append(brace)
             last = pos
-        out.append(self.text[last:])
-        return "".join(out)
+        out.append(self.text[last:end])
+        return "".join(out), self.text[end:]
 
 
 def is_layout(value) -> bool:
@@ -120,13 +124,17 @@ def is_layout(value) -> bool:
 
 
 def restore_layout_json(text: str) -> str:
-    """The prompt with a brace-stripped layout rebuilt; unchanged when it is not one or the result does not parse."""
+    """The prompt with a brace-stripped layout at its start rebuilt, and any words after it kept one space after the
+    JSON; unchanged when it does not start with one or the result does not parse."""
     if not _STRIPPED_START.match(text):
         return text
     try:
-        rebuilt = _Rebuilder(text).rebuild()
-        if is_layout(json.loads(rebuilt)):
-            return rebuilt
+        rebuilt, rest = _Rebuilder(text).rebuild()
+        if not is_layout(json.loads(rebuilt)):
+            return text
     except (ValueError, IndexError):
-        pass
-    return text
+        return text
+    if not rest.strip():
+        return rebuilt + rest
+    words = rest.strip(", \t\r\n")
+    return f"{rebuilt} {words}" if words else rebuilt
