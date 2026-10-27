@@ -21,10 +21,14 @@ OPTION = "moss_edit_reference"
 LABEL = "[MOSS-Image] Enable Reference"
 INFO = "enable Edit ; disable img2img"
 INFO_LORA = "requires the MOSS Image Edit LoRA (chinoll/Moss-Image-Edit)"
+# Forge Neo's built-in MOSS-Image has a reference setting of its own; each one applies to its own backend only
+INFO_BACKEND = ("applies with [MOSS-Image] Backend on Extension; on Forge built-in, Forge's own "
+                "[Moss-Image] Reference Method applies instead")
 SIZE_OPTION = "moss_edit_reference_size"
 SIZE_DEFAULT = 512  # the reference_max_edge default of the LoRA authors' ComfyUI node
 SIZE_LABEL = "[MOSS-Image] Reference Maximum Side Length"
-SIZE_INFO = "every reference is scaled down to this long side (multiples of 16) before encoding; 0 = no limit"
+SIZE_INFO = ("every reference is scaled down to this long side (multiples of 16) before encoding; 512 = the LoRA "
+             "authors' default; 0 = no limit, the img2img picture goes in at the job's Width x Height")
 MAX_REFERENCES = 4  # what the LoRA was trained with
 FORMAT = "moss-edit-lora"
 
@@ -132,9 +136,10 @@ def register_settings() -> None:
     from . import settings
 
     if OPTION not in shared.opts.data_labels:
-        shared.opts.add_option(OPTION, OptionInfo(False, LABEL, section=settings.SECTION, category_id=settings.CATEGORY)
-                               .info(INFO).info(INFO_LORA)
-                               .info("pin to <b>Quicksettings</b> is recommended if changed often"))
+        option = OptionInfo(False, LABEL, section=settings.SECTION, category_id=settings.CATEGORY).info(INFO).info(INFO_LORA)
+        if settings.forge_has_built_in():
+            option = option.info(INFO_BACKEND)
+        shared.opts.add_option(OPTION, option.info("pin to <b>Quicksettings</b> is recommended if changed often"))
         shared.opts.onchange(OPTION, clear_references, call=False)
     if SIZE_OPTION not in shared.opts.data_labels:
         shared.opts.add_option(SIZE_OPTION, OptionInfo(SIZE_DEFAULT, SIZE_LABEL, gr.Slider,

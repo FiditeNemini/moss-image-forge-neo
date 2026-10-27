@@ -107,7 +107,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 - Turn on **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Enable Reference** - pinning it to **Quicksettings** helps if you switch often
 - In img2img, put the picture in, set **Denoising strength** to 1, and write the change as the prompt with the LoRA, for example `<lora:moss_image_edit:1>Change only the pink dress to bright red. Keep the character, face, hair, pose, background and composition unchanged.`
 - Tested with Euler, MOSS, 30 steps, CFG 4, 1024x1024, the authors' settings
-- The picture goes to the model scaled down to 512 on its long side; change it under **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Reference Maximum Side Length**
+- The picture goes to the model scaled down to 512 on its long side, the default of the LoRA authors' ComfyUI node; change it under **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Reference Maximum Side Length** - 0 means no limit: the picture goes in at the job's Width x Height
 - Works with the [8-step LoRA](#-8-step-lora) too: add both LoRAs to the prompt and use 8 steps, CFG 1 - about a minute per 1024x1024 picture on an RTX 2070
 - The LoRA was trained mostly on illustrations: on photos the change is made, but the rest of the scene is kept more loosely - the framing, the background or the object's shape can change
 - More pictures can go in through **ImageStitch Integrated** (up to 4 in all), but in our test with two the result turned into a collage, and on an 8 GB card it took about ten times longer - one picture is what works today
@@ -120,6 +120,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 - OpenMOSS says blocks 22, 24 and 26 all help the picture, so `22, 24, 26` is worth a try
 - Plain CFG looks more realistic, but some details can fall apart
 - Forge Neo 2.31 also has **[Moss-Image] Skip Layer Guidance** settings: they apply when **[MOSS-Image] Backend** is set to Forge built-in, and do nothing while the extension runs the checkpoint
+- Newer Forge Neo builds also have **[Moss-Image] Reference Method** for editing: the same split applies - it works with Forge built-in, while **[MOSS-Image] Enable Reference** and **Reference Maximum Side Length** work with the extension
 
 ### ⚡ 8-Step LoRA
 
