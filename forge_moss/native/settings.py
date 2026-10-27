@@ -6,9 +6,9 @@ OPTION = "moss_uncond_skip_layers"
 DEFAULT = "22"
 LABEL = "[MOSS-Image] Blocks skipped in the negative-prompt pass"
 INFO = "zero-based, comma-separated; 22 = upstream's guidance (24 and 26 also help); empty = plain CFG"
-# Forge Neo's "Stable Diffusion" settings section and category, where its per-model options ([Klein], [Krea2]...) live
-# (options_section splits its ("sd", "Stable Diffusion", "sd") the same way)
-SECTION = ("sd", "Stable Diffusion")
+# A settings page of its own under the "Stable Diffusion" category, Settings > Stable Diffusion > MOSS-Image, as the
+# Qwen-Image 2.1 extension does (options_section splits ("id", "Label", "category") the same way)
+SECTION = ("moss_image", "MOSS-Image")
 CATEGORY = "sd"
 
 

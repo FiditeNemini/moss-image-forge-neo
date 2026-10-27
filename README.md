@@ -31,10 +31,14 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 ## 🆕 What's New
 
+### v0.1.5 - Cleaner INT4 Checkpoints
+
+- **INT4 checkpoints look better** - the small community INT4 files now run with more precision by default, from the same file and in the same memory; a setting brings back the old way ([details](#-int4-checkpoints))
+
 ### v0.1.4 - Image Editing and Backend Choice
 
 - **Edit pictures with an instruction** - the [MOSS Image Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA by chinoll works in img2img: give the picture, say what to change, and the rest stays ([how to use it](#%EF%B8%8F-image-editing)) ([#5](https://github.com/eduardoabreu81/moss-image-forge-neo/issues/5))
-- **Extension or Forge built-in** - on Forge Neo 2.31 and newer, **Settings → Stable Diffusion → [MOSS-Image] Backend** picks who runs MOSS-Image checkpoints: the extension, or Forge Neo's own support. The change applies at the next generation, with no restart
+- **Extension or Forge built-in** - on Forge Neo 2.31 and newer, **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Backend** picks who runs MOSS-Image checkpoints: the extension, or Forge Neo's own support. The change applies at the next generation, with no restart
 
 ### v0.1.3 - Forge Neo 2.31 and Faster Generation
 
@@ -100,10 +104,10 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 - The [MOSS Image Edit](https://huggingface.co/chinoll/Moss-Image-Edit) LoRA by chinoll changes what you ask and keeps the rest of the picture: colors, clothes, lighting, seasons, style
 - Download `adapter_model.safetensors`, rename it to something clearer such as `moss_image_edit.safetensors` and put it in `models/Lora`
-- Turn on **Settings → Stable Diffusion → [MOSS-Image] Enable Reference** - pinning it to **Quicksettings** helps if you switch often
+- Turn on **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Enable Reference** - pinning it to **Quicksettings** helps if you switch often
 - In img2img, put the picture in, set **Denoising strength** to 1, and write the change as the prompt with the LoRA, for example `<lora:moss_image_edit:1>Change only the pink dress to bright red. Keep the character, face, hair, pose, background and composition unchanged.`
 - Tested with Euler, MOSS, 30 steps, CFG 4, 1024x1024, the authors' settings
-- The picture goes to the model scaled down to 512 on its long side; change it under **[MOSS-Image] Reference Maximum Side Length**
+- The picture goes to the model scaled down to 512 on its long side; change it under **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Reference Maximum Side Length**
 - Works with the [8-step LoRA](#-8-step-lora) too: add both LoRAs to the prompt and use 8 steps, CFG 1 - about a minute per 1024x1024 picture on an RTX 2070
 - The LoRA was trained mostly on illustrations: on photos the change is made, but the rest of the scene is kept more loosely - the framing, the background or the object's shape can change
 - More pictures can go in through **ImageStitch Integrated** (up to 4 in all), but in our test with two the result turned into a collage, and on an 8 GB card it took about ten times longer - one picture is what works today
@@ -112,7 +116,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 ### 🧭 Upstream's Guidance
 
 - The negative-prompt pass of CFG leaves out block 22 of the model, as the official pipeline does by default
-- Change it under **Settings → Stable Diffusion → [MOSS-Image] Blocks skipped in the negative-prompt pass**: other blocks, comma-separated, or empty for plain CFG
+- Change it under **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Blocks skipped in the negative-prompt pass**: other blocks, comma-separated, or empty for plain CFG
 - OpenMOSS says blocks 22, 24 and 26 all help the picture, so `22, 24, 26` is worth a try
 - Plain CFG looks more realistic, but some details can fall apart
 - Forge Neo 2.31 also has **[Moss-Image] Skip Layer Guidance** settings: they apply when **[MOSS-Image] Backend** is set to Forge built-in, and do nothing while the extension runs the checkpoint
@@ -124,6 +128,21 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 - Set **Sampler** to Euler, **Schedule type** to MOSS (or Simple), **Steps** to 8 and **CFG** to 1
 - It is a work in progress: the picture is sharp and the writing is readable, but fine details and text are a little less clean than with 50 steps. With 4 steps the picture came out washed out, so stay at 8
 - If you prefer `lora_latest.safetensors`, the author recommends strength 0.7
+
+### 🚀 4-Step LoRA
+
+- The 4-step LoRA from [akhaliq](https://huggingface.co/akhaliq/MOSS-Image-SFT-4-steps) works with the SFT model: pictures in 4 steps, with no negative prompt pass - use it instead of the 8-step one, not together
+- Download `lora.safetensors`, rename it to `MOSS-Image-SFT-4-steps.safetensors`, put it in `models/Lora` and add it to the prompt: `<lora:MOSS-Image-SFT-4-steps:1>`
+- Set **Sampler** to Euler, **Schedule type** to MOSS, **Steps** to 4 and **CFG** to 1
+- In our test the pictures came out coherent and the Chinese and English text was readable, a little softer than with 8 steps
+
+### 🪶 INT4 Checkpoints
+
+- The small INT4 ConvRot checkpoints shared by the community (about 3 GB, made for 8 GB cards) now give a cleaner picture: MOSS-Image runs them with more precision, from the same file and in the same memory
+- Pick how under **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Activations of INT4 checkpoints**: **INT8 (W4A8)**, the default, or **As stored (W4A4)**, the way the file asks for. The change applies at the next generation, with no restart
+- It is a little slower: on an RTX 2070, an 896x1152 picture at 8 steps took 15 s instead of 13 s
+- It works with both choices of **[MOSS-Image] Backend**, and other checkpoints are not affected
+- An INT4 file still loses some detail next to an INT8 one: if your card has room, the INT8 file of the same model gives the best picture
 
 ### 🛡️ Safe by Design
 
@@ -152,7 +171,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 7. Pick the **moss** UI preset, the checkpoint, and the text encoder and autoencoder under **VAE / Text Encoder**
 
 > [!Note]
-> Tested with the INT8 files of the SFT and Base models, on an NVIDIA A40 and an RTX A6000. The BF16 files of the same repository have not been tested yet. The 8-step LoRA and the editing LoRA were tested with the INT8 SFT model on an RTX 2070 (8 GB).
+> Tested with the INT8 files of the SFT and Base models, on an NVIDIA A40 and an RTX A6000. The BF16 files of the same repository have not been tested yet. The 8-step LoRA and the editing LoRA were tested with the INT8 SFT model on an RTX 2070 (8 GB), and the INT4 setting with a community INT4 checkpoint on the same card.
 
 ---
 
@@ -171,6 +190,10 @@ The **moss** preset sets these values; change them on the **MOSS** page of **Set
 - Write full captions - the scene, the objects, where they are, and the exact text in quotes
 - Use Euler and the MOSS schedule; Simple gives nearly the same steps
 - New text encoder files appear in the list after a restart of Forge Neo
+- Write "a young woman in her twenties" instead of "girl": MOSS draws a child for "girl"
+- Text of up to about 40 words comes out right; a full page of text is too much for the model
+- Pictures of 1 to 2 megapixels work best
+- Faint vertical stripes on a smooth sky or wall are a known quirk of the model; two DeBand LoRAs by MATLOWAI used together, both at strength 1, are reported to remove them
 - Before uninstalling, switch the UI preset to another one
 
 ---
@@ -182,6 +205,7 @@ The **moss** preset sets these values; change them on the **MOSS** page of **Set
 - **[ComfyUI](https://github.com/comfyanonymous/ComfyUI)** by comfyanonymous and Comfy-Org - the Qwen3.5 implementation this port follows, and the INT8 files
 - **[Qwen3.5](https://huggingface.co/Qwen)** by the Qwen team - the text encoder
 - **[lodestones](https://huggingface.co/lodestones/MOSS-Image-SFT-8-steps-dmd)** - the 8-step LoRA
+- **[akhaliq](https://huggingface.co/akhaliq/MOSS-Image-SFT-4-steps)** - the 4-step LoRA
 - **[chinoll](https://huggingface.co/chinoll/Moss-Image-Edit)** - the MOSS Image Edit LoRA and its [reference code](https://github.com/Chenkin-x/Moss-Image-Edit)
 - **[Transformers](https://github.com/huggingface/transformers)** by Hugging Face - the Qwen3.5 reference
 
