@@ -10,7 +10,7 @@ from backend import loader
 from backend.nn import krea
 from huggingface_guess import detection, model_list
 
-from . import edit, int4, model, settings, text_encoder
+from . import edit, model, settings, text_encoder
 from .checkpoints import check_vae, clean_transformer_state_dict, text_encoder_prefix
 from .engine import MossImageEngine
 from .transformer import MossImageDiT
@@ -129,7 +129,6 @@ def register_callbacks() -> None:
     from modules import script_callbacks
 
     script_callbacks.on_cfg_denoiser(edit.on_cfg_denoiser, name="moss_image_edit")
-    script_callbacks.on_cfg_denoiser(int4.on_cfg_denoiser, name="moss_image_int4")
 
 
 def _register_scheduler() -> None:
@@ -179,11 +178,6 @@ def apply() -> None:
     except Exception as e:
         # txt2img and img2img still work; editing stays off
         logger.warning(f"[MOSS-Image] could not add the MOSS Image Edit settings: {e}")
-    try:
-        int4.register_settings()
-    except Exception as e:
-        # INT4 checkpoints still run, with the activations their metadata asks for
-        logger.warning(f"[MOSS-Image] could not add the INT4 activations setting: {e}")
     # Forge's built-in LoRA extension loads before this one; when it does not, the engine retries at model load
     from . import lora
 
