@@ -90,10 +90,37 @@ class TestRestoreLayout(unittest.TestCase):
                              "bbox_format": "yxyx"}, ensure_ascii=False)
         self.assertEqual(restore_layout_json(strip(layout)), layout)
 
+    def test_words_after_the_layout_stay_after_it(self):
+        # the prompt as the engine sees it once Forge removed <lora:venusbody:1>: the trigger word right after the
+        # layout, or with the commas the tag sat between
+        layout = ('"summary":"canvas":"single","caption":"a realistic photograph","items":["label":"character",'
+                  '"caption":"princess daisy","bbox":[-298,0,808,648],"label":"object","caption":"ocean",'
+                  '"bbox":[-808,-648,808,648]],"bbox_coord_space":"abs_centralized","bbox_format":"yxyx"')
+        expected = {"summary": {"canvas": "single", "caption": "a realistic photograph"},
+                    "items": [{"label": "character", "caption": "princess daisy", "bbox": [-298, 0, 808, 648]},
+                              {"label": "object", "caption": "ocean", "bbox": [-808, -648, 808, 648]}],
+                    "bbox_coord_space": "abs_centralized", "bbox_format": "yxyx"}
+        for seen in (layout + " venusbody", layout + ",,venusbody,,", layout + ", venusbody, "):
+            restored = restore_layout_json(seen)
+            rebuilt, words = restored.rsplit(" ", 1)
+            self.assertEqual(json.loads(rebuilt), expected, seen)
+            self.assertEqual(words, "venusbody", seen)
+
+    def test_trailing_commas_and_several_words(self):
+        layout = '"summary":"caption":"x","items":[],"bbox_format":"yxyx"'
+        rebuilt = '{"summary":{"caption":"x"},"items":[],"bbox_format":"yxyx"}'
+        self.assertEqual(restore_layout_json(layout + ",,"), rebuilt)
+        self.assertEqual(restore_layout_json(layout + " trailing"), rebuilt + " trailing")
+        self.assertEqual(restore_layout_json(layout + ", venusbody, wet hair, "), rebuilt + " venusbody, wet hair")
+        self.assertEqual(restore_layout_json(layout + ' a "quoted'), rebuilt + ' a "quoted')
+        self.assertEqual(restore_layout_json('"summary":"caption":"x","items":[] and more'),
+                         '{"summary":{"caption":"x"},"items":[]} and more')
+
     def test_other_prompts_are_left_alone(self):
-        for text in (COMPACT, GUIDE, "A cat on a sofa.", "", '"summary": a cat', '"summary":"caption":"x"',
-                     '"items":["label":"text"', '"summary":"caption":"x","items":[] and more',
-                     '"summary":"caption":"x","items":[],"bbox_format":"yxyx" trailing'):
+        # an intact layout, words after it included, reaches the model as written
+        for text in (COMPACT, GUIDE, COMPACT + " venusbody", "A cat on a sofa.", "", '"summary": a cat',
+                     '"summary":"caption":"x"', '"items":["label":"text"', '"summary":"caption":"x" venusbody',
+                     '"summary":{"caption":"x"},"items":[]'):
             self.assertEqual(restore_layout_json(text), text, text)
 
 

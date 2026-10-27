@@ -19,7 +19,8 @@ EXTENSION = "Extension"
 BUILT_IN = "Forge built-in"
 BACKEND_LABEL = "[MOSS-Image] Backend"
 BACKEND_INFO = ("who runs MOSS-Image checkpoints: this extension, or Forge Neo's built-in support (its own "
-                "[Moss-Image] Skip Layer Guidance options apply then); takes effect at the next generation")
+                "[Moss-Image] Skip Layer Guidance and [Moss-Image] Reference Method options apply then, in place of "
+                "this page's); takes effect at the next generation")
 
 
 def forge_has_built_in() -> bool:

@@ -31,6 +31,14 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 ## 🆕 What's New
 
+### v0.1.7 - INT4 Setting Moves to Its Own Extension
+
+- **The INT4 setting now lives in [INT4 W4A8 for Forge Neo](https://github.com/eduardoabreu81/forge-neo-int4-w4a8)** - the same cleaner picture from the small INT4 checkpoints, now for every model with INT4 ConvRot files (Krea 2 included), not only MOSS-Image. Install it to keep the INT4 improvement ([details](#-int4-checkpoints))
+
+### v0.1.6 - Layouts with LoRA Trigger Words
+
+- **Layouts with a LoRA's trigger word after them** - with sd-dynamic-prompts on, a layout followed by a word such as a LoRA's trigger (`... "bbox_format":"yxyx" venusbody`), or by the commas a removed `<lora:...>` tag leaves, reached the model with its `{ }` still missing; the layout is now put back together and the words come right after it
+
 ### v0.1.5 - Cleaner INT4 Checkpoints
 
 - **INT4 checkpoints look better** - the small community INT4 files now run with more precision by default, from the same file and in the same memory; a setting brings back the old way ([details](#-int4-checkpoints))
@@ -107,7 +115,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 - Turn on **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Enable Reference** - pinning it to **Quicksettings** helps if you switch often
 - In img2img, put the picture in, set **Denoising strength** to 1, and write the change as the prompt with the LoRA, for example `<lora:moss_image_edit:1>Change only the pink dress to bright red. Keep the character, face, hair, pose, background and composition unchanged.`
 - Tested with Euler, MOSS, 30 steps, CFG 4, 1024x1024, the authors' settings
-- The picture goes to the model scaled down to 512 on its long side; change it under **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Reference Maximum Side Length**
+- The picture goes to the model scaled down to 512 on its long side, the default of the LoRA authors' ComfyUI node; change it under **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Reference Maximum Side Length** - 0 means no limit: the picture goes in at the job's Width x Height
 - Works with the [8-step LoRA](#-8-step-lora) too: add both LoRAs to the prompt and use 8 steps, CFG 1 - about a minute per 1024x1024 picture on an RTX 2070
 - The LoRA was trained mostly on illustrations: on photos the change is made, but the rest of the scene is kept more loosely - the framing, the background or the object's shape can change
 - More pictures can go in through **ImageStitch Integrated** (up to 4 in all), but in our test with two the result turned into a collage, and on an 8 GB card it took about ten times longer - one picture is what works today
@@ -120,6 +128,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 - OpenMOSS says blocks 22, 24 and 26 all help the picture, so `22, 24, 26` is worth a try
 - Plain CFG looks more realistic, but some details can fall apart
 - Forge Neo 2.31 also has **[Moss-Image] Skip Layer Guidance** settings: they apply when **[MOSS-Image] Backend** is set to Forge built-in, and do nothing while the extension runs the checkpoint
+- Newer Forge Neo builds also have **[Moss-Image] Reference Method** for editing: the same split applies - it works with Forge built-in, while **[MOSS-Image] Enable Reference** and **Reference Maximum Side Length** work with the extension
 
 ### ⚡ 8-Step LoRA
 
@@ -138,10 +147,8 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 
 ### 🪶 INT4 Checkpoints
 
-- The small INT4 ConvRot checkpoints shared by the community (about 3 GB, made for 8 GB cards) now give a cleaner picture: MOSS-Image runs them with more precision, from the same file and in the same memory
-- Pick how under **Settings → Stable Diffusion → MOSS-Image → [MOSS-Image] Activations of INT4 checkpoints**: **INT8 (W4A8)**, the default, or **As stored (W4A4)**, the way the file asks for. The change applies at the next generation, with no restart
-- It is a little slower: on an RTX 2070, an 896x1152 picture at 8 steps took 15 s instead of 13 s
-- It works with both choices of **[MOSS-Image] Backend**, and other checkpoints are not affected
+- The small INT4 ConvRot checkpoints shared by the community (about 3 GB, made for 8 GB cards) give a cleaner picture with **[INT4 W4A8 for Forge Neo](https://github.com/eduardoabreu81/forge-neo-int4-w4a8)**: same file, same memory, more precision
+- It works with both choices of **[MOSS-Image] Backend**, and with other models that ship INT4 ConvRot files, such as Krea 2
 - An INT4 file still loses some detail next to an INT8 one: if your card has room, the INT8 file of the same model gives the best picture
 
 ### 🛡️ Safe by Design
@@ -171,7 +178,7 @@ Generate with **[MOSS-Image](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT
 7. Pick the **moss** UI preset, the checkpoint, and the text encoder and autoencoder under **VAE / Text Encoder**
 
 > [!Note]
-> Tested with the INT8 files of the SFT and Base models, on an NVIDIA A40 and an RTX A6000. The BF16 files of the same repository have not been tested yet. The 8-step LoRA and the editing LoRA were tested with the INT8 SFT model on an RTX 2070 (8 GB), and the INT4 setting with a community INT4 checkpoint on the same card.
+> Tested with the INT8 files of the SFT and Base models, on an NVIDIA A40 and an RTX A6000. The BF16 files of the same repository have not been tested yet. The 8-step LoRA and the editing LoRA were tested with the INT8 SFT model on an RTX 2070 (8 GB).
 
 ---
 
